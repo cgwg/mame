@@ -19,6 +19,7 @@
 #include "video/tc0110pcr.h"
 #include "video/tc0150rod.h"
 #include "video/tc0480scp.h"
+#include "screen.h"
 
 
 class taitoz_state : public driver_device
@@ -41,14 +42,21 @@ public:
 		m_tc0220ioc(*this, "tc0220ioc"),
 		m_tc0510nio(*this, "tc0510nio"),
 		m_tc0140syt(*this, "tc0140syt"),
+		m_screen(*this, "screen"),
 		m_gfxdecode(*this, "gfxdecode"),
 		m_filter(*this, {"2610.1.r", "2610.1.l", "2610.2.r", "2610.2.l"}),
+		m_gas(*this, "GAS"),
+		m_brake(*this, "BRAKE"),
 		m_steer(*this, "STEER"),
+		m_stickx(*this, "STICKX"),
+		m_sticky(*this, "STICKY"),
 		m_io_eepromout(*this, "EEPROMOUT"),
 		m_lamps(*this, "lamp%u", 0U)
 	{ }
 
-	DECLARE_CUSTOM_INPUT_MEMBER(taitoz_pedal_r);
+	DECLARE_CUSTOM_INPUT_MEMBER(gas_pedal_r);
+	DECLARE_CUSTOM_INPUT_MEMBER(brake_pedal_r);
+	template <int axis> DECLARE_CUSTOM_INPUT_MEMBER(adstick_r);
 
 	void bshark_base(machine_config &config);
 	void sci(machine_config &config);
@@ -68,6 +76,9 @@ public:
 protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void device_post_load() override;
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+	void screen_config(machine_config &config, int vdisp_start, int vdisp_end);
 
 private:
 	enum
@@ -89,7 +100,7 @@ private:
 	u16      m_cpua_ctrl;
 	s32      m_sci_int6;
 	s32      m_ioc220_port;
-	u8      m_eep_latch;
+	u8       m_eep_latch;
 
 	/* devices */
 	required_device<cpu_device> m_maincpu;
@@ -104,9 +115,14 @@ private:
 	optional_device<tc0220ioc_device> m_tc0220ioc;
 	optional_device<tc0510nio_device> m_tc0510nio;
 	optional_device<tc0140syt_device> m_tc0140syt;  // bshark & spacegun miss the CPUs which shall use TC0140
+	required_device<screen_device> m_screen;
 	required_device<gfxdecode_device> m_gfxdecode;
 	optional_device_array<filter_volume_device, 4> m_filter;
+	optional_ioport m_gas;
+	optional_ioport m_brake;
 	optional_ioport m_steer;
+	optional_ioport m_stickx;
+	optional_ioport m_sticky;
 	optional_ioport m_io_eepromout;
 	output_finder<2> m_lamps;
 
@@ -129,8 +145,6 @@ private:
 	u16 sci_spriteframe_r();
 	void sci_spriteframe_w(u16 data);
 	void contcirc_out_w(u8 data);
-	DECLARE_MACHINE_START(taitoz);
-	DECLARE_MACHINE_RESET(taitoz);
 	DECLARE_VIDEO_START(taitoz);
 	DECLARE_MACHINE_START(chasehq);
 	u32 screen_update_contcirc(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);

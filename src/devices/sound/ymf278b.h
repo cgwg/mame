@@ -5,10 +5,9 @@
 
 #pragma once
 
+#include "dirom.h"
 
-#define YMF278B_STD_CLOCK (33868800)            /* standard clock for OPL4 */
-
-class ymf278b_device : public device_t, public device_sound_interface, public device_rom_interface
+class ymf278b_device : public device_t, public device_sound_interface, public device_rom_interface<22>
 {
 public:
 	ymf278b_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
@@ -30,7 +29,7 @@ protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 	// device_rom_interface overrides
 	virtual void rom_bank_updated() override;
@@ -90,7 +89,7 @@ private:
 	void precompute_rate_tables();
 	void register_save_state();
 
-	void update_request() { m_stream_ymf262->update(); }
+	void update_request() { m_stream->update(); }
 
 	static void static_irq_handler(device_t *param, int irq) { }
 	static void static_timer_handler(device_t *param, int c, const attotime &period) { }
@@ -136,7 +135,6 @@ private:
 
 	// ymf262
 	void *m_ymf262;
-	sound_stream * m_stream_ymf262;
 };
 
 DECLARE_DEVICE_TYPE(YMF278B, ymf278b_device)

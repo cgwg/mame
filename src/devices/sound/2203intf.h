@@ -17,7 +17,6 @@ public:
 	ym2203_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 	// configuration helpers
-	template <class Object> devcb_base &set_irq_handler(Object &&cb) { return m_irq_handler.set_callback(std::forward<Object>(cb)); }
 	auto irq_handler() { return m_irq_handler.bind(); }
 
 	u8 read(offs_t offset);
@@ -40,7 +39,7 @@ protected:
 	virtual void device_clock_changed() override;
 
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-	void stream_generate(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples);
+	void stream_generate(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs);
 
 private:
 	enum

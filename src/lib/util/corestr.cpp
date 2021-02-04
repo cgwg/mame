@@ -9,13 +9,12 @@
 ****************************************************************************/
 
 #include "corestr.h"
-#include "osdcore.h"
 
 #include <algorithm>
 #include <memory>
 
-#include <ctype.h>
-#include <stdlib.h>
+#include <cctype>
+#include <cstdlib>
 
 
 /*-------------------------------------------------
@@ -127,16 +126,6 @@ bool core_iswildstr(const char *sp)
 -------------------------------------------------*/
 
 #include <algorithm>
-
-int strcatvprintf(std::string &str, const char *format, va_list args)
-{
-	char tempbuf[4096];
-	int result = vsprintf(tempbuf, format, args);
-
-	// set the result
-	str.append(tempbuf);
-	return result;
-}
 
 void strdelchr(std::string& str, char chr)
 {

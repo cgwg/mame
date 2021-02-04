@@ -117,7 +117,7 @@ uint8_t speedatk_state::iox_key_matrix_calc(uint8_t p_side)
 	return 0;
 }
 
-READ8_MEMBER(speedatk_state::key_matrix_r)
+uint8_t speedatk_state::key_matrix_r()
 {
 	if(m_coin_impulse > 0)
 	{
@@ -151,13 +151,13 @@ READ8_MEMBER(speedatk_state::key_matrix_r)
 	return iox_key_matrix_calc((m_mux_data == 2) ? 0 : 2);
 }
 
-WRITE8_MEMBER(speedatk_state::key_matrix_w)
+void speedatk_state::key_matrix_w(uint8_t data)
 {
 	m_mux_data = data;
 }
 
 /* Key matrix status,used for coin settings and I don't know what else... */
-READ8_MEMBER(speedatk_state::key_matrix_status_r)
+uint8_t speedatk_state::key_matrix_status_r()
 {
 	/* bit 0: busy flag,active low */
 	return (m_km_status & 0xfe) | 1;
@@ -174,7 +174,7 @@ My guess is that the other commands configs the key matrix, it probably needs so
 8x coinage setting command
 a1
 */
-WRITE8_MEMBER(speedatk_state::key_matrix_status_w)
+void speedatk_state::key_matrix_status_w(uint8_t data)
 {
 	m_km_status = data;
 	if((m_km_status & 0xf0) == 0x80) //coinage setting command
@@ -298,7 +298,7 @@ static GFXDECODE_START( gfx_speedatk )
 	GFXDECODE_ENTRY( "gfx2", 0, charlayout_3bpp,   0, 32 )
 GFXDECODE_END
 
-WRITE8_MEMBER(speedatk_state::output_w)
+void speedatk_state::output_w(uint8_t data)
 {
 	m_flip_scr = data & 0x80;
 
@@ -323,7 +323,7 @@ void speedatk_state::speedatk(machine_config &config)
 	screen.set_visarea(0*8, 32*8-1, 0*8, 32*8-1);
 	screen.set_screen_update(FUNC(speedatk_state::screen_update));
 
-	H46505(config, m_crtc, MASTER_CLOCK/16);   /* hand tuned to get ~60 fps */
+	MC6845(config, m_crtc, MASTER_CLOCK/16);   /* unknown variant; hand tuned to get ~60 fps */
 	m_crtc->set_screen("screen");
 	m_crtc->set_show_border_area(false);
 	m_crtc->set_char_width(8);

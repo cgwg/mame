@@ -21,7 +21,6 @@
 #include "machine/6821pia.h"
 #include "machine/mos6530n.h"
 #include "machine/ram.h"
-#include "sound/wave.h"
 #include "video/dl1416.h"
 #include "emupal.h"
 #include "screen.h"
@@ -80,7 +79,7 @@ private:
 	void z32_cb2_w(bool state);
 	u8 z32_pb_r();
 
-	template <unsigned D> DECLARE_WRITE16_MEMBER(update_ds);
+	template <unsigned D> void update_ds(offs_t offset, u16 data);
 
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(z24_load) { return load_cart(image, m_z24, "z24"); }
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(z25_load) { return load_cart(image, m_z25, "z25"); }

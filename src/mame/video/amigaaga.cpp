@@ -81,7 +81,6 @@ VIDEO_START_MEMBER(amiga_state,amiga_aga)
 	VIDEO_START_CALL_MEMBER( amiga );
 
 	m_aga_diwhigh_written = 0;
-	m_screen->register_screen_bitmap(m_flickerfixer32);
 }
 
 
@@ -476,7 +475,7 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 		if ((scanline & 1) ^ lof)
 		{
 			// lof matches? then render this scanline
-			dst = &bitmap.pix32(scanline);
+			dst = &bitmap.pix(scanline);
 		}
 		else
 		{
@@ -486,7 +485,7 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 			// otherwise just render the contents of the previous frame's scanline
 			int shift = (m_previous_lof == lof) ? 1 : 0;
 
-			memcpy(&bitmap.pix32(scanline), &m_flickerfixer32.pix32(scanline - shift), amiga_state::SCREEN_WIDTH * 4);
+			std::copy_n(&m_flickerfixer.pix(scanline - shift), amiga_state::SCREEN_WIDTH, &bitmap.pix(scanline));
 			return;
 		}
 	}
@@ -830,7 +829,7 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 
 	// save
 	if (dst != nullptr)
-		memcpy(&m_flickerfixer32.pix32(save_scanline), dst, amiga_state::SCREEN_WIDTH * 4);
+		std::copy_n(dst, amiga_state::SCREEN_WIDTH, &m_flickerfixer.pix(save_scanline));
 
 #if GUESS_COPPER_OFFSET
 	if (m_screen->frame_number() % 64 == 0 && scanline == 0)

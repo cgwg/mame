@@ -2,10 +2,26 @@
 // copyright-holders:Miodrag Milanovic, AJR
 /***************************************************************************
 
-        PK-8020 driver by Miodrag Milanovic
-            based on work of Sergey Erokhin from pk8020.narod.ru
+PK-8020 driver by Miodrag Milanovic
+    based on work of Sergey Erokhin from pk8020.narod.ru
 
-        18/07/2008 Preliminary driver.
+2008-07-18 Preliminary driver.
+
+Cassette is "best guess", as I was unable to locate any recordings, and
+also do not know the commands to save and load. SAVE and LOAD appear when
+F2 or shift-F2 pressed (in Korvet), but only produce errors.
+
+Status as at 2019-09-18:
+Korvet, Neiva - largely working. Error after running something from B drive.
+              - floppy operation is very slow.
+Kontur - needs to boot from a floppy, not working.
+BK8T - Keys to navigate initial config screen are mostly unknown
+       (space - change value; Esc - go to next screen).
+     - Next screen: wants the date and time. You can press enter here.
+     - Wait a while, ignore the big message. You get a menu.
+     - Press 1 for a typewriter thing, or 6 for another menu.
+     - Not sure about the choices; needs someone who can read Russian.
+
 
 ****************************************************************************/
 
@@ -221,11 +237,11 @@ static void pk8020_floppies(device_slot_interface &device)
 void pk8020_state::pk8020(machine_config &config)
 {
 	/* basic machine hardware */
-	I8080(config, m_maincpu, 20_MHz_XTAL / 8); // КР580ВМ80А
-	m_maincpu->set_addrmap(AS_PROGRAM, &pk8020_state::pk8020_mem);
-	m_maincpu->set_addrmap(AS_IO, &pk8020_state::pk8020_io);
-	m_maincpu->set_vblank_int("screen", FUNC(pk8020_state::pk8020_interrupt));
-	m_maincpu->set_irq_acknowledge_callback("inr", FUNC(pic8259_device::inta_cb));
+	i8080a_cpu_device &maincpu(I8080A(config, m_maincpu, 20_MHz_XTAL / 8)); // КР580ВМ80А
+	maincpu.set_addrmap(AS_PROGRAM, &pk8020_state::pk8020_mem);
+	maincpu.set_addrmap(AS_IO, &pk8020_state::pk8020_io);
+	maincpu.set_vblank_int("screen", FUNC(pk8020_state::pk8020_interrupt));
+	maincpu.in_inta_func().set("inr", FUNC(pic8259_device::acknowledge));
 
 	PLS100(config, m_decplm); // КР556РТ2 (82S100 equivalent; D31)
 
@@ -236,10 +252,7 @@ void pk8020_state::pk8020(machine_config &config)
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_refresh_hz(50);
-	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500)); /* not accurate */
-	screen.set_size(512, 256);
-	screen.set_visarea(0, 512-1, 0, 256-1);
+	screen.set_raw(20_MHz_XTAL / 2, 640, 0, 512, 312, 0, 256);
 	screen.set_screen_update(FUNC(pk8020_state::screen_update_pk8020));
 	screen.set_palette(m_palette);
 
@@ -252,6 +265,14 @@ void pk8020_state::pk8020(machine_config &config)
 	iop1.out_pc_callback().set(FUNC(pk8020_state::video_page_w));
 
 	i8255_device &iop2(I8255(config, "iop2")); // КР580ВВ55А (D16)
+	iop2.out_pa_callback().set(m_printer, FUNC(centronics_device::write_data0)).bit(0).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data1)).bit(1).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data2)).bit(2).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data3)).bit(3).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data4)).bit(4).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data5)).bit(5).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data6)).bit(6).invert();
+	iop2.out_pa_callback().append(m_printer, FUNC(centronics_device::write_data7)).bit(7).invert();
 	iop2.out_pc_callback().set(FUNC(pk8020_state::ppi_2_portc_w));
 
 	I8255(config, "iop3"); // КР580ВВ55А (D2)
@@ -299,10 +320,14 @@ void pk8020_state::pk8020(machine_config &config)
 
 	/* audio hardware */
 	SPEAKER(config, "mono").front_center();
-	SPEAKER_SOUND(config, "speaker").add_route(ALL_OUTPUTS, "mono", 0.25);
-	WAVE(config, "wave", "cassette").add_route(ALL_OUTPUTS, "mono", 0.25);
+	SPEAKER_SOUND(config, "speaker").add_route(ALL_OUTPUTS, "mono", 0.50);
 
-	CASSETTE(config, "cassette").set_default_state(CASSETTE_PLAY);
+	CASSETTE(config, m_cass);
+	m_cass->set_default_state(CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_ENABLED);
+	m_cass->add_route(ALL_OUTPUTS, "mono", 0.05);
+
+	CENTRONICS(config, m_printer, centronics_devices, nullptr);
+	m_printer->busy_handler().set(m_inr, FUNC(pic8259_device::ir6_w)).invert();
 
 	/* internal ram */
 	RAM(config, RAM_TAG).set_default_size("258K").set_default_value(0x00); // 64 + 4*48 + 2 = 258
@@ -370,7 +395,7 @@ ROM_END
 /* Driver */
 
 /*    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT   CLASS         INIT        COMPANY      FULLNAME         FLAGS */
-COMP( 1987, korvet, 0,      0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Korvet", MACHINE_SUPPORTS_SAVE)
-COMP( 1987, neiva,  korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Neiva",  MACHINE_SUPPORTS_SAVE)
-COMP( 1987, kontur, korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Kontur", MACHINE_SUPPORTS_SAVE)
-COMP( 1987, bk8t,   korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "BK-8T",         MACHINE_SUPPORTS_SAVE)
+COMP( 1987, korvet, 0,      0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Korvet", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE)
+COMP( 1987, neiva,  korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Neiva",  MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE)
+COMP( 1987, kontur, korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "PK8020 Kontur", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE)
+COMP( 1987, bk8t,   korvet, 0,      pk8020,  pk8020, pk8020_state, empty_init, "<unknown>", "BK-8T",         MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE)

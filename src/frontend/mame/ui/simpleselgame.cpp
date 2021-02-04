@@ -24,7 +24,7 @@
 #include "mame.h"
 #include "uiinput.h"
 
-#include <ctype.h>
+#include <cctype>
 
 
 namespace ui {
@@ -37,12 +37,13 @@ simple_menu_select_game::simple_menu_select_game(mame_ui_manager &mui, render_co
 	: menu(mui, container)
 	, m_error(false), m_rerandomize(false)
 	, m_search()
+	, m_skip_main_items(0)
 	, m_driverlist(driver_list::total() + 1)
 	, m_drivlist()
 	, m_cached_driver(nullptr)
 	, m_cached_flags(machine_flags::NOT_WORKING)
 	, m_cached_unemulated(device_t::feature::NONE), m_cached_imperfect(device_t::feature::NONE)
-	, m_cached_color(UI_BACKGROUND_COLOR)
+	, m_cached_color(ui().colors().background_color())
 {
 	build_driver_list();
 	if (gamename)
@@ -249,7 +250,7 @@ void simple_menu_select_game::populate(float &customtop, float &custombottom)
 				"the docs directory for information on configuring %2$s."),
 				emulator_info::get_configname(),
 				emulator_info::get_appname());
-		item_append(txt, "", FLAG_MULTILINE | FLAG_REDTEXT, nullptr);
+		item_append(txt, FLAG_MULTILINE | FLAG_REDTEXT, nullptr);
 		return;
 	}
 
@@ -274,13 +275,13 @@ void simple_menu_select_game::populate(float &customtop, float &custombottom)
 	if (stack_has_special_main_menu())
 	{
 		item_append(menu_item_type::SEPARATOR);
-		item_append(_("Configure Options"), "", 0, (void *)1);
-		skip_main_items = 1;
+		item_append(_("Configure Options"), 0, (void *)1);
+		m_skip_main_items = 1;
 	}
 
 	// configure the custom rendering
-	customtop = ui().get_line_height() + 3.0f * UI_BOX_TB_BORDER;
-	custombottom = 4.0f * ui().get_line_height() + 3.0f * UI_BOX_TB_BORDER;
+	customtop = ui().get_line_height() + 3.0f * ui().box_tb_border();
+	custombottom = 4.0f * ui().get_line_height() + 3.0f * ui().box_tb_border();
 }
 
 
@@ -302,12 +303,12 @@ void simple_menu_select_game::custom_render(void *selectedref, float top, float 
 	// draw the top box
 	draw_text_box(
 			tempbuf, tempbuf + 1,
-			origx1, origx2, origy1 - top, origy1 - UI_BOX_TB_BORDER,
+			origx1, origx2, origy1 - top, origy1 - ui().box_tb_border(),
 			ui::text_layout::CENTER, ui::text_layout::TRUNCATE, false,
-			UI_TEXT_COLOR, UI_BACKGROUND_COLOR, 1.0f);
+			ui().colors().text_color(), ui().colors().background_color(), 1.0f);
 
 	// determine the text to render below
-	driver = ((uintptr_t)selectedref > skip_main_items) ? (const game_driver *)selectedref : nullptr;
+	driver = ((uintptr_t)selectedref > m_skip_main_items) ? (const game_driver *)selectedref : nullptr;
 	if (driver)
 	{
 		// first line is game name
@@ -323,7 +324,7 @@ void simple_menu_select_game::custom_render(void *selectedref, float top, float 
 		if (driver != m_cached_driver)
 		{
 			emu_options clean_options;
-			machine_static_info const info(machine_config(*driver, clean_options));
+			machine_static_info const info(ui().options(), machine_config(*driver, clean_options));
 			m_cached_driver = driver;
 			m_cached_flags = info.machine_flags();
 			m_cached_unemulated = info.unemulated_features();
@@ -384,9 +385,9 @@ void simple_menu_select_game::custom_render(void *selectedref, float top, float 
 	// draw the bottom box
 	draw_text_box(
 			tempbuf, tempbuf + 4,
-			origx1, origx2, origy2 + UI_BOX_TB_BORDER, origy2 + bottom,
+			origx1, origx2, origy2 + ui().box_tb_border(), origy2 + bottom,
 			ui::text_layout::CENTER, ui::text_layout::TRUNCATE, true,
-			UI_TEXT_COLOR, driver ? m_cached_color : UI_BACKGROUND_COLOR, 1.0f);
+			ui().colors().text_color(), driver ? m_cached_color : ui().colors().background_color(), 1.0f);
 }
 
 

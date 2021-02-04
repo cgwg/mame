@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles
 /***************************************************************************
 
-    mconfig.c
+    mconfig.cpp
 
     Machine configuration macros and functions.
 
@@ -12,8 +12,10 @@
 #include "emuopts.h"
 #include "screen.h"
 
-#include <ctype.h>
+#include <cctype>
+
 #include <cstring>
+#include <numeric>
 
 
 //**************************************************************************
@@ -37,18 +39,19 @@ private:
 //-------------------------------------------------
 
 machine_config::machine_config(const game_driver &gamedrv, emu_options &options)
-	: m_minimum_quantum(attotime::zero)
-	, m_gamedrv(gamedrv)
+	: m_gamedrv(gamedrv)
 	, m_options(options)
 	, m_root_device()
 	, m_default_layouts([] (char const *a, char const *b) { return 0 > std::strcmp(a, b); })
 	, m_current_device(nullptr)
+	, m_maximum_quantums([] (char const *a, char const *b) { return 0 > std::strcmp(a, b); })
+	, m_perfect_quantum_device(nullptr, "")
 {
 	// add the root device
 	device_add("root", gamedrv.type, 0);
 
 	// intialize slot devices - make sure that any required devices have been allocated
-	for (device_slot_interface &slot : slot_interface_iterator(root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(root_device()))
 	{
 		device_t &owner = slot.device();
 		const char *slot_option_name = owner.tag() + 1;
@@ -101,7 +104,7 @@ machine_config::machine_config(const game_driver &gamedrv, emu_options &options)
 	}
 
 	// then notify all devices that their configuration is complete
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		if (!device.configured())
 			device.config_complete();
 }
@@ -117,6 +120,51 @@ machine_config::~machine_config()
 
 
 //-------------------------------------------------
+//  maximum_quantum - get smallest configured
+//  maximum quantum
+//-------------------------------------------------
+
+attotime machine_config::maximum_quantum(attotime const &default_quantum) const
+{
+	return std::accumulate(
+			m_maximum_quantums.begin(),
+			m_maximum_quantums.end(),
+			default_quantum,
+			[] (attotime const &lhs, maximum_quantum_map::value_type const &rhs) { return (std::min)(lhs, rhs.second); });
+}
+
+//-------------------------------------------------
+//  perfect_quantum_device - get device configured
+//  for perfect quantum if any
+//-------------------------------------------------
+
+device_execute_interface *machine_config::perfect_quantum_device() const
+{
+	if (!m_perfect_quantum_device.first)
+		return nullptr;
+
+	device_t *const found(m_perfect_quantum_device.first->subdevice(m_perfect_quantum_device.second.c_str()));
+	if (!found)
+	{
+		throw emu_fatalerror(
+				"Device %s relative to %s specified for perfect interleave is not present!\n",
+				m_perfect_quantum_device.second,
+				m_perfect_quantum_device.first->tag());
+	}
+
+	device_execute_interface *result;
+	if (!found->interface(result))
+	{
+		throw emu_fatalerror("Device %s (%s) specified for perfect interleave does not implement device_execute_interface!\n",
+				found->tag(),
+				found->shortname());
+	}
+
+	return result;
+}
+
+
+//-------------------------------------------------
 //  set_default_layout - set layout for current
 //  device
 //-------------------------------------------------
@@ -126,6 +174,19 @@ void machine_config::set_default_layout(internal_layout const &layout)
 	std::pair<default_layout_map::iterator, bool> const ins(m_default_layouts.emplace(current_device().tag(), &layout));
 	if (!ins.second)
 		ins.first->second = &layout;
+}
+
+
+//-------------------------------------------------
+//  set_maximum_quantum - set maximum scheduling
+//  quantum for current device device
+//-------------------------------------------------
+
+void machine_config::set_maximum_quantum(attotime const &quantum)
+{
+	std::pair<maximum_quantum_map::iterator, bool> const ins(m_maximum_quantums.emplace(current_device().tag(), quantum));
+	if (!ins.second)
+		ins.first->second = quantum;
 }
 
 
@@ -211,7 +272,7 @@ std::pair<const char *, device_t *> machine_config::resolve_owner(const char *ta
 		part.assign(tag, next - tag);
 		owner = owner->subdevices().find(part);
 		if (!owner)
-			throw emu_fatalerror("Could not find %s when looking up path for device %s\n", part.c_str(), orig_tag);
+			throw emu_fatalerror("Could not find %s when looking up path for device %s\n", part, orig_tag);
 		tag = next+1;
 	}
 	assert(tag[0] != '\0');
@@ -262,9 +323,6 @@ device_t &machine_config::add_device(std::unique_ptr<device_t> &&device, device_
 		// allocate the root device directly
 		assert(!m_root_device);
 		m_root_device = std::move(device);
-		driver_device *driver = dynamic_cast<driver_device *>(m_root_device.get());
-		if (driver)
-			driver->set_game_driver(m_gamedrv);
 		m_root_device->add_machine_configuration(*this);
 		return *m_root_device;
 	}
@@ -288,43 +346,70 @@ device_t &machine_config::replace_device(std::unique_ptr<device_t> &&device, dev
 
 
 //-------------------------------------------------
-//  device_find - configuration helper to
-//  locate a device
-//-------------------------------------------------
-
-device_t *machine_config::device_find(device_t *owner, const char *tag)
-{
-	// find the original device by relative tag (must exist)
-	assert(owner != nullptr);
-	device_t *device = owner->subdevice(tag);
-	if (device == nullptr)
-		throw emu_fatalerror("Unable to find device '%s'\n", tag);
-
-	// return the device
-	return device;
-}
-
-
-//-------------------------------------------------
 //  remove_references - globally remove references
 //  to a device about to be removed from the tree
 //-------------------------------------------------
 
 void machine_config::remove_references(device_t &device)
 {
-	// remove default layouts for subdevices
+	// sanity check
+	if (m_perfect_quantum_device.first == &device)
+	{
+		throw emu_fatalerror(
+				"Removing %s device %s would make the perfect quantum device target invalid\n",
+				device.shortname(),
+				device.tag());
+	}
+
+	// remove default layouts and maximum quantum settings for subdevices
 	char const *const tag(device.tag());
 	std::size_t const taglen(std::strlen(tag));
-	default_layout_map::iterator it(m_default_layouts.lower_bound(tag));
-	while ((m_default_layouts.end() != it) && !std::strncmp(tag, it->first, taglen))
+	for (auto it = m_default_layouts.lower_bound(tag); (m_default_layouts.end() != it) && !std::strncmp(tag, it->first, taglen); )
 	{
 		if (!it->first[taglen] || (':' == it->first[taglen]))
 			it = m_default_layouts.erase(it);
 		else
 			++it;
 	}
+	for (auto it = m_maximum_quantums.lower_bound(tag); (m_maximum_quantums.end() != it) && !std::strncmp(tag, it->first, taglen); )
+	{
+		if (!it->first[taglen] || (':' == it->first[taglen]))
+			it = m_maximum_quantums.erase(it);
+		else
+			++it;
+	}
 
 	// iterate over all devices and remove any references
-	for (device_t &scan : device_iterator(root_device()))
+	for (device_t &scan : device_enumerator(root_device()))
 		scan.subdevices().m_tagmap.clear();
+}
+
+
+//-------------------------------------------------
+//  set_perfect_quantum - set device to base
+//  scheduling interval on
+//-------------------------------------------------
+
+void machine_config::set_perfect_quantum(device_t &device, std::string tag)
+{
+	if (!m_current_device)
+	{
+		throw emu_fatalerror(
+				"Perfect quantum device can only be set during configuration (set to %s relative to %s)\n",
+				tag,
+				device.tag());
+	}
+
+	if (m_current_device != m_root_device.get())
+	{
+		throw emu_fatalerror(
+				"Perfect quantum device can only be set by the root device (set to %s relative to %s while configuring %s device %s)\n",
+				tag,
+				device.tag(),
+				m_current_device->shortname(),
+				m_current_device->tag());
+	}
+
+	m_perfect_quantum_device.first = &device;
+	m_perfect_quantum_device.second = std::move(tag);
 }

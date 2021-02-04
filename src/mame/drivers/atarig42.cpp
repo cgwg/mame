@@ -12,6 +12,8 @@
 
     Known bugs:
         * ASIC65 for Road Riot not quite perfect
+        * Missing DSPCOM board for Road Riot 4WD
+            +or shared ram pcb that bridges both pcbs for the twin cab kind of like in F1: Exhaust Note and Air Rescue from segas32.cpp
 
 ****************************************************************************
 
@@ -33,9 +35,9 @@
  *
  *************************************/
 
-void atarig42_state::update_interrupts()
+void atarig42_state::video_int_ack_w(uint16_t data)
 {
-	m_maincpu->set_input_line(4, m_video_int_state ? ASSERT_LINE : CLEAR_LINE);
+	m_maincpu->set_input_line(M68K_IRQ_4, CLEAR_LINE);
 }
 
 
@@ -47,13 +49,8 @@ void atarig42_state::machine_start()
 	save_item(NAME(m_sloop_next_bank));
 	save_item(NAME(m_sloop_offset));
 	save_item(NAME(m_sloop_state));
-}
 
-
-void atarig42_state::machine_reset()
-{
-	atarigen_state::machine_reset();
-	scanline_timer_reset(*m_screen, 8);
+	m_sloop_bank = 0;
 }
 
 
@@ -64,14 +61,14 @@ void atarig42_state::machine_reset()
  *
  *************************************/
 
-WRITE8_MEMBER(atarig42_state::a2d_select_w)
+void atarig42_state::a2d_select_w(offs_t offset, uint8_t data)
 {
 	if (m_adc.found())
 		m_adc->address_offset_start_w(offset, 0);
 }
 
 
-READ8_MEMBER(atarig42_state::a2d_data_r)
+uint8_t atarig42_state::a2d_data_r(offs_t offset)
 {
 	if (!m_adc.found())
 		return 0xff;
@@ -83,7 +80,7 @@ READ8_MEMBER(atarig42_state::a2d_data_r)
 }
 
 
-WRITE16_MEMBER(atarig42_state::io_latch_w)
+void atarig42_state::io_latch_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	/* upper byte */
 	if (ACCESSING_BITS_8_15)
@@ -110,7 +107,7 @@ WRITE16_MEMBER(atarig42_state::io_latch_w)
 }
 
 
-WRITE16_MEMBER(atarig42_state::mo_command_w)
+void atarig42_state::mo_command_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA(m_mo_command);
 	m_rle->command_write((data == 0) ? ATARIRLE_COMMAND_CHECKSUM : ATARIRLE_COMMAND_DRAW);
@@ -236,7 +233,7 @@ void atarig42_0x200_state::roadriot_sloop_tweak(int offset)
 }
 
 
-READ16_MEMBER(atarig42_0x200_state::roadriot_sloop_data_r)
+uint16_t atarig42_0x200_state::roadriot_sloop_data_r(offs_t offset)
 {
 	roadriot_sloop_tweak(offset);
 	if (offset < 0x78000/2)
@@ -246,7 +243,7 @@ READ16_MEMBER(atarig42_0x200_state::roadriot_sloop_data_r)
 }
 
 
-WRITE16_MEMBER(atarig42_0x200_state::roadriot_sloop_data_w)
+void atarig42_0x200_state::roadriot_sloop_data_w(offs_t offset, uint16_t data)
 {
 	roadriot_sloop_tweak(offset);
 }
@@ -293,7 +290,7 @@ void atarig42_0x400_state::guardians_sloop_tweak(int offset)
 }
 
 
-READ16_MEMBER(atarig42_0x400_state::guardians_sloop_data_r)
+uint16_t atarig42_0x400_state::guardians_sloop_data_r(offs_t offset)
 {
 	guardians_sloop_tweak(offset);
 	if (offset < 0x78000/2)
@@ -303,7 +300,7 @@ READ16_MEMBER(atarig42_0x400_state::guardians_sloop_data_r)
 }
 
 
-WRITE16_MEMBER(atarig42_0x400_state::guardians_sloop_data_w)
+void atarig42_0x400_state::guardians_sloop_data_w(offs_t offset, uint16_t data)
 {
 	guardians_sloop_tweak(offset);
 }
@@ -515,10 +512,13 @@ static const atari_rle_objects_config modesc_0x400 =
  *
  *************************************/
 
-MACHINE_CONFIG_START(atarig42_state::atarig42)
+void atarig42_state::atarig42(machine_config &config)
+{
 	/* basic machine hardware */
-	M68000(config, m_maincpu, ATARI_CLOCK_14MHz);
+	M68000(config, m_maincpu, 14.318181_MHz_XTAL);
 	m_maincpu->set_addrmap(AS_PROGRAM, &atarig42_state::main_map);
+
+	TIMER(config, "scantimer").configure_scanline(FUNC(atarig42_state::scanline_update), m_screen, 0, 8);
 
 	EEPROM_2816(config, "eeprom").lock_after_write(true);
 
@@ -528,17 +528,19 @@ MACHINE_CONFIG_START(atarig42_state::atarig42)
 	GFXDECODE(config, m_gfxdecode, "palette", gfx_atarig42);
 	PALETTE(config, "palette").set_format(palette_device::IRGB_1555, 2048);
 
-	MCFG_TILEMAP_ADD_CUSTOM("playfield", "gfxdecode", 2, atarig42_state, get_playfield_tile_info, 8,8, atarig42_playfield_scan, 128,64)
+	TILEMAP(config, m_playfield_tilemap, m_gfxdecode, 2, 8,8);
+	m_playfield_tilemap->set_layout(FUNC(atarig42_state::atarig42_playfield_scan), 128,64);
+	m_playfield_tilemap->set_info_callback(FUNC(atarig42_state::get_playfield_tile_info));
 	TILEMAP(config, m_alpha_tilemap, m_gfxdecode, 2, 8,8, TILEMAP_SCAN_ROWS, 64,32, 0).set_info_callback(FUNC(atarig42_state::get_alpha_tile_info));
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_video_attributes(VIDEO_UPDATE_BEFORE_VBLANK);
 	/* note: these parameters are from published specs, not derived */
 	/* the board uses an SOS chip to generate video signals */
-	m_screen->set_raw(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240);
+	m_screen->set_raw(14.318181_MHz_XTAL/2, 456, 0, 336, 262, 0, 240);
 	m_screen->set_screen_update(FUNC(atarig42_state::screen_update_atarig42));
 	m_screen->set_palette("palette");
-	m_screen->screen_vblank().set(FUNC(atarig42_state::video_int_write_line));
+	m_screen->screen_vblank().set_inputline(m_maincpu, M68K_IRQ_4, ASSERT_LINE);
 
 	MCFG_VIDEO_START_OVERRIDE(atarig42_state,atarig42)
 
@@ -549,14 +551,14 @@ MACHINE_CONFIG_START(atarig42_state::atarig42)
 	m_jsa->main_int_cb().set_inputline(m_maincpu, M68K_IRQ_5);
 	m_jsa->test_read_cb().set_ioport("IN2").bit(6);
 	m_jsa->add_route(ALL_OUTPUTS, "mono", 1.0);
-MACHINE_CONFIG_END
+}
 
 void atarig42_0x200_state::atarig42_0x200(machine_config &config)
 {
 	atarig42(config);
 	ATARI_RLE_OBJECTS(config, m_rle, 0, modesc_0x200);
 
-	ADC0809(config, m_adc, ATARI_CLOCK_14MHz / 16);
+	ADC0809(config, m_adc, 14.318181_MHz_XTAL / 16);
 	m_adc->in_callback<0>().set_ioport("A2D0");
 	m_adc->in_callback<1>().set_ioport("A2D1");
 
@@ -825,7 +827,7 @@ void atarig42_0x200_state::init_roadriot()
 	m_playfield_base = 0x400;
 
 	address_space &main = m_maincpu->space(AS_PROGRAM);
-	main.install_readwrite_handler(0x000000, 0x07ffff, read16_delegate(FUNC(atarig42_0x200_state::roadriot_sloop_data_r),this), write16_delegate(FUNC(atarig42_0x200_state::roadriot_sloop_data_w),this));
+	main.install_readwrite_handler(0x000000, 0x07ffff, read16sm_delegate(*this, FUNC(atarig42_0x200_state::roadriot_sloop_data_r)), write16sm_delegate(*this, FUNC(atarig42_0x200_state::roadriot_sloop_data_w)));
 	m_sloop_base = (uint16_t *)memregion("maincpu")->base();
 
 	/*
@@ -860,7 +862,7 @@ void atarig42_0x400_state::init_guardian()
 	*(uint16_t *)&memregion("maincpu")->base()[0x80000] = 0x4E75;
 
 	address_space &main = m_maincpu->space(AS_PROGRAM);
-	main.install_readwrite_handler(0x000000, 0x07ffff, read16_delegate(FUNC(atarig42_0x400_state::guardians_sloop_data_r),this), write16_delegate(FUNC(atarig42_0x400_state::guardians_sloop_data_w),this));
+	main.install_readwrite_handler(0x000000, 0x07ffff, read16sm_delegate(*this, FUNC(atarig42_0x400_state::guardians_sloop_data_r)), write16sm_delegate(*this, FUNC(atarig42_0x400_state::guardians_sloop_data_w)));
 	m_sloop_base = (uint16_t *)memregion("maincpu")->base();
 
 	/*
@@ -893,7 +895,7 @@ void atarig42_0x400_state::init_guardian()
  *
  *************************************/
 
-GAME( 1991, roadriot,  0,        atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 1, 04 Dec 1991)", MACHINE_UNEMULATED_PROTECTION )
-GAME( 1991, roadriota, roadriot, atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 2, 13 Nov 1991)", MACHINE_UNEMULATED_PROTECTION )
-GAME( 1991, roadriotb, roadriot, atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 3, 04 Jun 1991)", MACHINE_UNEMULATED_PROTECTION )
+GAME( 1991, roadriot,  0,        atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 1, 04 Dec 1991)", MACHINE_UNEMULATED_PROTECTION | MACHINE_NODEVICE_LAN )
+GAME( 1991, roadriota, roadriot, atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 2, 13 Nov 1991)", MACHINE_UNEMULATED_PROTECTION | MACHINE_NODEVICE_LAN )
+GAME( 1991, roadriotb, roadriot, atarig42_0x200, roadriot, atarig42_0x200_state, init_roadriot, ROT0, "Atari Games", "Road Riot 4WD (set 3, 04 Jun 1991)", MACHINE_UNEMULATED_PROTECTION | MACHINE_NODEVICE_LAN )
 GAME( 1992, guardian,  0,        atarig42_0x400, guardian, atarig42_0x400_state, init_guardian, ROT0, "Atari Games", "Guardians of the 'Hood", 0 )

@@ -21,7 +21,7 @@ void model2_state::debug_init()
 	if (machine().debug_flags & DEBUG_FLAG_ENABLED)
 	{
 		using namespace std::placeholders;
-		machine().debugger().console().register_command("m2", CMDFLAG_NONE, 0, 1, 2, std::bind(&model2_state::debug_commands, this, _1, _2));
+		machine().debugger().console().register_command("m2", CMDFLAG_CUSTOM_HELP, 0, 1, 2, std::bind(&model2_state::debug_commands, this, _1, _2));
 	}
 }
 
@@ -88,8 +88,8 @@ void model2_state::debug_geo_dasm_command(int ref, const std::vector<std::string
 
 	while (!end_code && ptr < 0x20000/4)
 	{
-		uint32_t opcode;
-		uint32_t attr;
+		u32 opcode;
+		u32 attr;
 
 		util::stream_format(f, "%08x: \t",ptr*4+0x900000);
 		opcode = m_bufferram[ptr++];

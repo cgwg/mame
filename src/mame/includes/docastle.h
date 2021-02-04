@@ -14,6 +14,7 @@
 #include "video/mc6845.h"
 #include "sound/msm5205.h"
 #include "emupal.h"
+#include "tilemap.h"
 
 class docastle_state : public driver_device
 {
@@ -47,7 +48,7 @@ private:
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_slave;
 	required_device<cpu_device> m_cpu3;
-	required_device<h46505_device> m_crtc;
+	required_device<hd6845s_device> m_crtc;
 	optional_device<msm5205_device> m_msm;
 	required_device_array<tms1025_device, 2> m_inp;
 
@@ -71,17 +72,17 @@ private:
 	uint8_t    m_buffer0[9];
 	uint8_t    m_buffer1[9];
 
-	DECLARE_READ8_MEMBER(docastle_shared0_r);
-	DECLARE_READ8_MEMBER(docastle_shared1_r);
-	DECLARE_WRITE8_MEMBER(docastle_shared0_w);
-	DECLARE_WRITE8_MEMBER(docastle_shared1_w);
-	DECLARE_WRITE8_MEMBER(docastle_nmitrigger_w);
-	DECLARE_WRITE8_MEMBER(docastle_videoram_w);
-	DECLARE_WRITE8_MEMBER(docastle_colorram_w);
-	DECLARE_READ8_MEMBER(inputs_flipscreen_r);
-	DECLARE_WRITE8_MEMBER(flipscreen_w);
-	DECLARE_READ8_MEMBER(idsoccer_adpcm_status_r);
-	DECLARE_WRITE8_MEMBER(idsoccer_adpcm_w);
+	uint8_t docastle_shared0_r(offs_t offset);
+	uint8_t docastle_shared1_r(offs_t offset);
+	void docastle_shared0_w(offs_t offset, uint8_t data);
+	void docastle_shared1_w(offs_t offset, uint8_t data);
+	void docastle_nmitrigger_w(uint8_t data);
+	void docastle_videoram_w(offs_t offset, uint8_t data);
+	void docastle_colorram_w(offs_t offset, uint8_t data);
+	uint8_t inputs_flipscreen_r(offs_t offset);
+	void flipscreen_w(offs_t offset, uint8_t data);
+	uint8_t idsoccer_adpcm_status_r();
+	void idsoccer_adpcm_w(uint8_t data);
 	TILE_GET_INFO_MEMBER(get_tile_info);
 	void docastle_palette(palette_device &palette) const;
 	DECLARE_VIDEO_START(dorunrun);

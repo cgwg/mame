@@ -20,7 +20,6 @@
 #include "machine/buffer.h"
 #include "machine/wd_fdc.h"
 #include "sound/spkrdev.h"
-#include "sound/wave.h"
 #include "emupal.h"
 
 #include "formats/trs_cas.h"
@@ -71,35 +70,35 @@ protected:
 
 private:
 	DECLARE_FLOPPY_FORMATS(floppy_formats);
-	DECLARE_WRITE8_MEMBER(port_ff_w);
-	DECLARE_WRITE8_MEMBER(port_f4_w);
-	DECLARE_WRITE8_MEMBER(port_ec_w);
-	DECLARE_WRITE8_MEMBER(port_ea_w);
-	DECLARE_WRITE8_MEMBER(port_e8_w);
-	DECLARE_WRITE8_MEMBER(port_e4_w);
-	DECLARE_WRITE8_MEMBER(port_e0_w);
-	DECLARE_WRITE8_MEMBER(port_9c_w);
-	DECLARE_WRITE8_MEMBER(port_90_w);
-	DECLARE_WRITE8_MEMBER(port_88_w);
-	DECLARE_WRITE8_MEMBER(port_84_w);
-	DECLARE_READ8_MEMBER(port_ff_r);
-	DECLARE_READ8_MEMBER(port_ec_r);
-	DECLARE_READ8_MEMBER(port_ea_r);
-	DECLARE_READ8_MEMBER(port_e8_r);
-	DECLARE_READ8_MEMBER(port_e4_r);
-	DECLARE_READ8_MEMBER(port_e0_r);
-	DECLARE_READ8_MEMBER(printer_r);
-	DECLARE_WRITE8_MEMBER(printer_w);
-	DECLARE_READ8_MEMBER(keyboard_r);
-	DECLARE_READ8_MEMBER(wd179x_r);
-	DECLARE_READ8_MEMBER(cp500_port_f4_r);
+	void port_ff_w(uint8_t data);
+	void port_f4_w(uint8_t data);
+	void port_ec_w(uint8_t data);
+	void port_ea_w(uint8_t data);
+	void port_e8_w(uint8_t data);
+	void port_e4_w(uint8_t data);
+	void port_e0_w(uint8_t data);
+	void port_9c_w(uint8_t data);
+	void port_90_w(uint8_t data);
+	void port_88_w(offs_t offset, uint8_t data);
+	void port_84_w(uint8_t data);
+	uint8_t port_ff_r();
+	uint8_t port_ec_r();
+	uint8_t port_ea_r();
+	uint8_t port_e8_r();
+	uint8_t port_e4_r();
+	uint8_t port_e0_r();
+	uint8_t printer_r();
+	void printer_w(uint8_t data);
+	uint8_t keyboard_r(offs_t offset);
+	uint8_t wd179x_r();
+	uint8_t cp500_port_f4_r();
 
 	INTERRUPT_GEN_MEMBER(rtc_interrupt);
 	INTERRUPT_GEN_MEMBER(fdc_interrupt);
 	TIMER_CALLBACK_MEMBER(cassette_data_callback);
 	DECLARE_WRITE_LINE_MEMBER(intrq_w);
 	DECLARE_WRITE_LINE_MEMBER(drq_w);
-	DECLARE_QUICKLOAD_LOAD_MEMBER(trs80_cmd);
+	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
 	uint32_t screen_update_trs80m3(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void cp500_io(address_map &map);

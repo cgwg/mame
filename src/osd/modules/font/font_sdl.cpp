@@ -8,10 +8,9 @@
 #include "font_module.h"
 #include "modules/osdmodule.h"
 
-#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_SOLARIS) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID)
+#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID)
 
 #include "corestr.h"
-#include "corealloc.h"
 #include "fileio.h"
 #include "unicode.h"
 
@@ -88,7 +87,7 @@ bool osd_font_sdl::open(std::string const &font_path, std::string const &_name, 
 	// if no success, try the font path
 	if (!font)
 	{
-		osd_printf_verbose("Searching font %s in -%s path/s\n", family.c_str(), font_path.c_str());
+		osd_printf_verbose("Searching font %s in -%s path/s\n", family, font_path);
 		//emu_file file(options().font_path(), OPEN_FLAG_READ);
 		emu_file file(font_path.c_str(), OPEN_FLAG_READ);
 		if (file.open(family.c_str()) == osd_file::error::NONE)
@@ -96,7 +95,7 @@ bool osd_font_sdl::open(std::string const &font_path, std::string const &_name, 
 			std::string full_name = file.fullpath();
 			font = TTF_OpenFont_Magic(full_name, POINT_SIZE, 0);
 			if (font)
-				osd_printf_verbose("Found font %s\n", full_name.c_str());
+				osd_printf_verbose("Found font %s\n", full_name);
 		}
 	}
 
@@ -112,7 +111,7 @@ bool osd_font_sdl::open(std::string const &font_path, std::string const &_name, 
 	{
 		if (!BDF_Check_Magic(name))
 		{
-			osd_printf_verbose("font %s is not TrueType or BDF, using MAME default\n", name.c_str());
+			osd_printf_verbose("font %s is not TrueType or BDF, using MAME default\n", name);
 		}
 		return false;
 	}
@@ -174,7 +173,7 @@ bool osd_font_sdl::get_bitmap(char32_t chnum, bitmap_argb32 &bitmap, std::int32_
 		// copy the rendered character image into it
 		for (int y = 0; y < bitmap.height(); y++)
 		{
-			std::uint32_t *const dstrow = &bitmap.pix32(y);
+			std::uint32_t *const dstrow = &bitmap.pix(y);
 			std::uint8_t const *const srcrow = reinterpret_cast<std::uint8_t const *>(drawsurf->pixels) + (y * drawsurf->pitch);
 
 			for (int x = 0; x < drawsurf->w; x++)

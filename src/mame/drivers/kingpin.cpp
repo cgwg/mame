@@ -14,7 +14,7 @@ DSW bank at S1
 3.579545MHz XTAL for CPU/sound, 10.7386MHz XTAL for video
 
 several multigame gamblers on this hardware:
-- The Dealer (not dumped)
+- The Dealer (bad dump)
 - Kingpin
 - Maxi-Dealer
 
@@ -41,6 +41,8 @@ Todo:
 #include "speaker.h"
 
 
+namespace {
+
 class kingpin_state : public driver_device
 {
 public:
@@ -55,7 +57,7 @@ public:
 	void dealracl(machine_config &config);
 
 private:
-	DECLARE_WRITE8_MEMBER(sound_nmi_w);
+	void sound_nmi_w(uint8_t data);
 	void kingpin_io_map(address_map &map);
 	void kingpin_program_map(address_map &map);
 	void kingpin_sound_map(address_map &map);
@@ -67,7 +69,7 @@ private:
 };
 
 
-WRITE8_MEMBER(kingpin_state::sound_nmi_w)
+void kingpin_state::sound_nmi_w(uint8_t data)
 {
 	m_soundlatch->write(data);
 	m_audiocpu->pulse_input_line(INPUT_LINE_NMI, attotime::zero);
@@ -76,7 +78,6 @@ WRITE8_MEMBER(kingpin_state::sound_nmi_w)
 void kingpin_state::kingpin_program_map(address_map &map)
 {
 	map(0x0000, 0xdfff).rom();
-	map(0xc000, 0xcfff).ram();
 	map(0xf000, 0xf7ff).ram().share("nvram");
 }
 
@@ -93,18 +94,18 @@ void kingpin_state::kingpin_io_map(address_map &map)
 	map(0x10, 0x13).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
 	map(0x20, 0x21).rw("tms9928a", FUNC(tms9928a_device::read), FUNC(tms9928a_device::write));
 	map(0x60, 0x60).w(FUNC(kingpin_state::sound_nmi_w));
-	//AM_RANGE(0x30, 0x30) AM_WRITENOP // lamps?
-	//AM_RANGE(0x40, 0x40) AM_WRITENOP // lamps?
-	//AM_RANGE(0x50, 0x50) AM_WRITENOP // ?
-	//AM_RANGE(0x70, 0x70) AM_WRITENOP // ?
+	//map(0x30, 0x30).nopw(); // lamps?
+	//map(0x40, 0x40).nopw(); // lamps?
+	//map(0x50, 0x50).nopw(); // ?
+	//map(0x70, 0x70).nopw(); // ?
 }
 
 void kingpin_state::kingpin_sound_map(address_map &map)
 {
 	map(0x0000, 0x1fff).rom();
 	map(0x8000, 0x8001).w("aysnd", FUNC(ay8910_device::address_data_w));
-	//AM_RANGE(0x8400, 0x8400) AM_READNOP // ?
-	//AM_RANGE(0x8401, 0x8401) AM_WRITENOP // ?
+	//map(0x8400, 0x8400).nopr(); // ?
+	//map(0x8401, 0x8401).nopw(); // ?
 	map(0x8800, 0x8fff).ram();
 	map(0x9000, 0x9000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
 }
@@ -302,8 +303,9 @@ ROM_START( dealracl ) // ROMs were unlabeled, so they might be ordered wrong.
 	ROM_LOAD( "11",  0x0000, 0x0800, BAD_DUMP CRC(91a12c65) SHA1(d6c24888937c01ebbc96e28cdd9bee83ad01a1cd) )
 ROM_END
 
+} // Anonymous namespace
 
 
-GAME( 1983, kingpin,  0, kingpin,  kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "Kingpin",     0 )
-GAME( 1983, maxideal, 0, kingpin,  kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "Maxi-Dealer", 0 )
-GAME( 1981, dealracl, 0, dealracl, kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "The Dealer (ACL)",  MACHINE_NOT_WORKING )
+GAME( 1983, kingpin,  0, kingpin,  kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "Kingpin",          MACHINE_SUPPORTS_SAVE )
+GAME( 1983, maxideal, 0, kingpin,  kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "Maxi-Dealer",      MACHINE_SUPPORTS_SAVE )
+GAME( 1981, dealracl, 0, dealracl, kingpin, kingpin_state, empty_init, 0, "ACL Manufacturing", "The Dealer (ACL)", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )

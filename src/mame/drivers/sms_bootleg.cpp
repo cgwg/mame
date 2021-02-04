@@ -240,15 +240,15 @@ void smsbootleg_state::sms_supergame_map(address_map &map)
 {
 	map(0x0000, 0xbfff).rom();
 	map(0xc000, 0xfff7).ram();
-//  AM_RANGE(0xfffc, 0xffff) AM_READWRITE(sms_mapper_r, sms_mapper_w)       /* Bankswitch control */
+//  map(0xfffc, 0xffff).rw(FUNC(smsbootleg_state::sms_mapper_r), FUNC(smsbootleg_state::sms_mapper_w));       /* Bankswitch control */
 }
 
-WRITE8_MEMBER(smsbootleg_state::port08_w)
+void smsbootleg_state::port08_w(uint8_t data)
 {
 //  logerror("port08_w %02x\n", data);
 }
 
-WRITE8_MEMBER(smsbootleg_state::port18_w)
+void smsbootleg_state::port18_w(uint8_t data)
 {
 	logerror("port18_w %02x\n", data);
 }
@@ -259,9 +259,9 @@ void smsbootleg_state::sms_supergame_io(address_map &map)
 	map.global_mask(0xff);
 	map.unmap_value_high();
 
-	map(0x04, 0x04).nopr(); //AM_READ_PORT("IN0") // these
+	map(0x04, 0x04).nopr(); //portr("IN0"); // these
 	map(0x08, 0x08).w(FUNC(smsbootleg_state::port08_w));
-	map(0x14, 0x14).nopr(); //AM_READ_PORT("IN1") // seem to be from a coinage / timer MCU, changing them directly changes the credits / time value
+	map(0x14, 0x14).nopr(); //portr("IN1"); // seem to be from a coinage / timer MCU, changing them directly changes the credits / time value
 	map(0x18, 0x18).w(FUNC(smsbootleg_state::port18_w));
 
 	map(0x40, 0x7f).r(FUNC(smsbootleg_state::sms_count_r)).w(m_vdp, FUNC(sega315_5124_device::psg_w));
@@ -280,7 +280,7 @@ void smsbootleg_state::sms_supergame(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &smsbootleg_state::sms_supergame_map);
 	m_maincpu->set_addrmap(AS_IO, &smsbootleg_state::sms_supergame_io);
 
-	config.m_minimum_quantum = attotime::from_hz(60);
+	config.set_maximum_quantum(attotime::from_hz(60));
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
@@ -295,8 +295,8 @@ void smsbootleg_state::sms_supergame(machine_config &config)
 	SEGA315_5246(config, m_vdp, XTAL(10'738'635));
 	m_vdp->set_screen(m_main_scr);
 	m_vdp->set_is_pal(false);
-	m_vdp->irq().set_inputline(m_maincpu, 0);
-	m_vdp->pause().set(FUNC(sms_state::sms_pause_callback));
+	m_vdp->n_int().set_inputline(m_maincpu, 0);
+	m_vdp->n_nmi().set_inputline(m_maincpu, INPUT_LINE_NMI);
 	m_vdp->add_route(ALL_OUTPUTS, "mono", 1.00);
 }
 
@@ -307,7 +307,7 @@ void smsbootleg_state::sms_supergame(machine_config &config)
 static INPUT_PORTS_START( sms_supergame )
 	PORT_START("PAUSE")
 	PORT_BIT( 0x7f, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )// PORT_NAME(DEF_STR(Pause)) PORT_CODE(KEYCODE_1)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )// PORT_NAME(DEF_STR(Pause)) PORT_CODE(KEYCODE_1) PORT_WRITE_LINE_DEVICE_MEMBER("sms_vdp", sega315_5124_device, n_nmi_in_write)
 #if 0
 	PORT_START("IN0")
 	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Unknown ) )

@@ -5,18 +5,17 @@
 
 
     Konami 'Hornet' Hardware
-    Konami, 1997-1999
+    Konami, 1997-2000
 
     Known games on this hardware include....
 
     Game                             (C)      Year
     ----------------------------------------------
-    Gradius 4 : Fukkatsu             Konami   1999
+    Gradius 4 : Fukkatsu             Konami   1998
     NBA Play by Play                 Konami   1998
+    Teraburst                        Konami   1998
     Silent Scope                     Konami   1999
-    Silent Scope 2 : Fatal Judgement Konami   2000
-    Silent Scope 2 : Dark Silhouette Konami   2000
-    Terraburst                       Konami   1998
+    Silent Scope 2                   Konami   2000
 
     Hardware overview:
 
@@ -33,7 +32,7 @@
         Konami 0000037122 (2D Tilemap)
         Konami 0000033906 (PCI bridge)
         3DFX 500-0003-03 (Voodoo) FBI with 2MB RAM
-        3DFX 500-0004-02 (Voodoo) TMU with 2MB RAM
+        3DFX 500-0004-02 (Voodoo) TMU with 4MB RAM
 
     GQ871 GFX Board:
     ----------------
@@ -47,12 +46,13 @@
     Hardware configurations:
     ------------------------
 
-    Game              KONAMI ID  CPU PCB    GFX Board(s)  LAN PCB
-    --------------------------------------------------------------
+    Game              KONAMI ID  CPU PCB    GFX Board(s)  notes
+    ----------------------------------------------------------------------
     Gradius 4         GX837      GN715(A)   GN715(B)
     NBA Play By Play  GX778      GN715(A)   GN715(B)
+    Teraburst         GX715      GN715(A)   GN715(B)      GN680(E) I/O board
     Silent Scope      GQ830      GN715(A)   2x GN715(B)
-    Silent Scope 2    GQ931      GN715(A)   2x GQ871(B)   GQ931(H)
+    Silent Scope 2    GQ931      GN715(A)   2x GQ871(B)   GQ931(H) LAN PCB
 
 
     PCB Layouts
@@ -142,14 +142,14 @@
 
     ROM Usage
     ---------
-                 |------------------------------- ROM Locations ----------------------------------|
-    Game         27P     25P  22P   16P     14P     12P     9P      16T     14T     12T  9T  7S
-    -----------------------------------------------------------------------------------------------
-    Gradius 4    837C01  -    -     837A09  837A10  -       778A12  837A04  837A05  -    -   837A08
-    NBA P/Play   778A01  -    -     778A09  778A10  778A11  778A12  778A04  778A05  -    -   778A08
-    S/Scope      830B01  -    -     830A09  830A10  -       -       -       -       -    -   830A08
-    S/Scope 2    931D01  -    -     931A09  931A10  931A11  -       931A04  -       -    -   931A08
-    Terraburst
+                 |------------------------------- ROM Locations ---------------------------------------|
+    Game         27P     25P     22P     16P     14P     12P     9P      16T     14T     12T  9T  7S
+    ----------------------------------------------------------------------------------------------------
+    Gradius 4    837C01  -       -       837A09  837A10  -       778A12  837A04  837A05  -    -   837A08
+    NBA P/Play   778A01  -       -       778A09  778A10  778A11  778A12  778A04  778A05  -    -   778A08
+    Teraburst    -       715l02  715l03  715A09  715A10  -       778A12  715A04  715A05  -    -   715A08
+    S/Scope      830B01  -       -       830A09  830A10  -       -       -       -       -    -   830A08
+    S/Scope 2    931D01  -       -       931A09  931A10  931A11  -       931A04  -       -    -   931A08
 
 
     Bottom Board
@@ -220,10 +220,41 @@
     -------------------------------------------
     Gradius 4    837A13  837A15  837A14  837A16
     NBA P/Play   778A13  778A15  778A14  778A16
-    S/Scope      -       -       -       -          (no ROMs, not used)
+    Teraburst    715A13  715A15  778A14  715A16
+    S/Scope      830A13  -       830A14  -
     S/Scope 2    -       -       -       -          (no ROMs, not used)
-    Terraburst
 
+
+    Teraburst uses a different variation of the I/O board used in Operation: Thunder Hurricane (see gticlub.cpp). Analog inputs are controlled by
+    two CCD cameras, one from each gun. This specific variation uses a K056800 which normally acts as a sound interface controller. Perhaps this
+    either sends analog inputs to the main pcb or isn't used at all. No network connection is involved in this setup as this board directly connects
+    to the main pcb via joining connector.
+
+    GN680 PWB(E)403381B
+    |------------------------------------------|
+    |CN11  CN12    CN8      CN9    CN10  DSW(4)|
+    |                 NRPS11     NRPS11        |
+    |                                          |
+    |                        LM1881   LM1881   |
+    |                                          |
+    |LED(x4)                                   |
+    |                                          |
+    |           68EC000FN16  8464              |
+    |    RESET_SW            8464              |
+    |32MHz                           715A17.20K|
+    |8464                 PAL(002962)          |
+    |      056800         PAL(002961)          |
+    |   PAL(056787A)      PAL(002960)          |
+    |   CN1                                    |
+    |------------------------------------------|
+    Notes:
+      68EC000 @ 16MHz (32/2)
+      CN11/12 - Power connectors
+      CN8/9   - 6-pin analog control connectors (to CCD cameras)
+      CN1     - Lower joining connector to main pcb
+      NRPS11  - Idec NRPS11 PC Board circuit protector
+      LM1881  - Video sync separator (DIP8)
+      056800  - Konami Custom (QFP80)
 
 
     LAN PCB: GQ931 PWB(H)      (C) 1999 Konami
@@ -233,20 +264,24 @@
     1 x 32.0000MHz Oscillator
 
          HYC2485S  SMC ARCNET Media Transceiver, RS485 5Mbps-2.5Mbps
-    8E   931A19    Konami 32meg masked ROM, ROM0 (compressed GFX data?)
-    6E   931A20    Konami 32meg masked ROM, ROM1 (compressed GFX data?)
+    8E   931A19    Konami 32meg masked ROM, ROM0 (compressed GFX data)
+    6E   931A20    Konami 32meg masked ROM, ROM1 (compressed GFX data)
     12F  XC9536    Xilinx  CPLD,  44 pin PLCC, Konami no. Q931H1
     12C  XCS10XL   Xilinx  FPGA, 100 pin PQFP, Konami no. 4C
     12B  CY7C199   Cypress 32kx8 SRAM
     8B   AT93C46   Atmel 1K serial EEPROM, 8 pin SOP
     16G  DS2401    Dallas Silicon Serial Number IC, 6 pin SOP
 
+    Note: This PCB does more than just networking. The serial eeprom is used as a means to prevent region change.
+    The timekeeper region has to match the serial eeprom. The two mask roms serve as GFX roms as the game "downloads"
+    the data from those two roms.
+
 
 
     GFX PCB:  GQ871 PWB(B)A    (C) 1999 Konami
     ------------------------------------------
 
-    There are no ROMs on the two GFX PCBs, all sockets are empty.
+    There are no ROMs on the two GFX PCBs, all sockets are empty. They are located on the LAN PCB.
     Prior to the game starting there is a message saying downloading data.
 
 
@@ -325,10 +360,13 @@
 #include "video/voodoo.h"
 #include "video/k037122.h"
 #include "emupal.h"
-#include "rendlay.h"
 #include "screen.h"
 #include "speaker.h"
 
+#include "layout/generic.h"
+
+
+namespace {
 
 class hornet_state : public driver_device
 {
@@ -357,23 +395,28 @@ public:
 		m_eepromout(*this, "EEPROMOUT"),
 		m_analog1(*this, "ANALOG1"),
 		m_analog2(*this, "ANALOG2"),
+		m_pcb_digit(*this, "pcbdigit%u", 0U),
 		m_user3_ptr(*this, "user3"),
 		m_user5_ptr(*this, "user5"),
 		m_lan_ds2401(*this, "lan_serial_id"),
 		m_watchdog(*this, "watchdog")
 	{ }
 
-	void terabrst(machine_config &config);
-	void sscope2(machine_config &config);
-	void hornet_2board(machine_config &config);
-	void hornet_2board_v2(machine_config &config);
 	void hornet(machine_config &config);
+	void terabrst(machine_config &config);
+	void sscope(machine_config &config);
+	void sscope2(machine_config &config);
 
 	void init_hornet();
-	void init_hornet_2board();
 	void init_gradius4();
 	void init_nbapbp();
 	void init_terabrst();
+	void init_sscope();
+	void init_sscope2();
+
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
 
 private:
 	// TODO: Needs verification on real hardware
@@ -396,60 +439,59 @@ private:
 	optional_device_array<voodoo_device, 2> m_voodoo;
 	required_ioport m_in0, m_in1, m_in2, m_dsw;
 	optional_ioport m_eepromout, m_analog1, m_analog2;
+	output_finder<2> m_pcb_digit;
 	optional_region_ptr<uint8_t> m_user3_ptr;
 	optional_region_ptr<uint8_t> m_user5_ptr;
 	optional_device<ds2401_device> m_lan_ds2401;
 	required_device<watchdog_timer_device> m_watchdog;
 
 	emu_timer *m_sound_irq_timer;
-	uint8_t m_led_reg0;
-	uint8_t m_led_reg1;
 	std::unique_ptr<uint8_t[]> m_jvs_sdata;
 	uint32_t m_jvs_sdata_ptr;
 	uint16_t m_gn680_latch;
 	uint16_t m_gn680_ret0;
 	uint16_t m_gn680_ret1;
 
-	DECLARE_READ32_MEMBER(hornet_k037122_sram_r);
-	DECLARE_WRITE32_MEMBER(hornet_k037122_sram_w);
-	DECLARE_READ32_MEMBER(hornet_k037122_char_r);
-	DECLARE_WRITE32_MEMBER(hornet_k037122_char_w);
-	DECLARE_READ32_MEMBER(hornet_k037122_reg_r);
-	DECLARE_WRITE32_MEMBER(hornet_k037122_reg_w);
-	DECLARE_READ8_MEMBER(sysreg_r);
-	DECLARE_WRITE8_MEMBER(sysreg_w);
-	DECLARE_WRITE32_MEMBER(comm1_w);
-	DECLARE_WRITE32_MEMBER(comm_rombank_w);
-	DECLARE_READ32_MEMBER(comm0_unk_r);
-	DECLARE_READ32_MEMBER(gun_r);
-	DECLARE_WRITE32_MEMBER(gun_w);
-	DECLARE_WRITE16_MEMBER(gn680_sysctrl);
-	DECLARE_READ16_MEMBER(gn680_latch_r);
-	DECLARE_WRITE16_MEMBER(gn680_latch_w);
-	DECLARE_READ32_MEMBER(dsp_dataram0_r);
-	DECLARE_WRITE32_MEMBER(dsp_dataram0_w);
-	DECLARE_READ32_MEMBER(dsp_dataram1_r);
-	DECLARE_WRITE32_MEMBER(dsp_dataram1_w);
+	uint32_t hornet_k037122_sram_r(offs_t offset);
+	void hornet_k037122_sram_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	uint32_t hornet_k037122_char_r(offs_t offset);
+	void hornet_k037122_char_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	uint32_t hornet_k037122_reg_r(offs_t offset);
+	void hornet_k037122_reg_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	uint8_t sysreg_r(offs_t offset);
+	void sysreg_w(offs_t offset, uint8_t data);
+	void comm1_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void comm_rombank_w(uint32_t data);
+	uint32_t comm0_unk_r(offs_t offset, uint32_t mem_mask = ~0);
+	uint32_t gun_r();
+	void gun_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	void gn680_sysctrl(uint16_t data);
+	uint16_t gn680_latch_r();
+	void gn680_latch_w(offs_t offset, uint16_t data);
+	uint32_t dsp_dataram0_r(offs_t offset);
+	void dsp_dataram0_w(offs_t offset, uint32_t data);
+	uint32_t dsp_dataram1_r(offs_t offset);
+	void dsp_dataram1_w(offs_t offset, uint32_t data);
 	DECLARE_WRITE_LINE_MEMBER(voodoo_vblank_0);
 	DECLARE_WRITE_LINE_MEMBER(voodoo_vblank_1);
-	DECLARE_WRITE16_MEMBER(soundtimer_en_w);
-	DECLARE_WRITE16_MEMBER(soundtimer_count_w);
+	void soundtimer_en_w(uint16_t data);
+	void soundtimer_count_w(uint16_t data);
 	double adc12138_input_callback(uint8_t input);
-	DECLARE_WRITE8_MEMBER(jamma_jvs_w);
-	DECLARE_READ8_MEMBER(comm_eeprom_r);
-	DECLARE_WRITE8_MEMBER(comm_eeprom_w);
+	void jamma_jvs_w(uint8_t data);
+	uint8_t comm_eeprom_r();
+	void comm_eeprom_w(uint8_t data);
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
-	DECLARE_MACHINE_RESET(hornet_2board);
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_rscreen(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	TIMER_CALLBACK_MEMBER(sound_irq);
 	int jvs_encode_data(uint8_t *in, int length);
 	int jvs_decode_data(uint8_t *in, uint8_t *out, int length);
 	void jamma_jvs_cmd_exec();
-	void gn680_memmap(address_map &map);
 	void hornet_map(address_map &map);
+	void terabrst_map(address_map &map);
+	void sscope_map(address_map &map);
+	void sscope2_map(address_map &map);
+	void gn680_memmap(address_map &map);
 	void sharc0_map(address_map &map);
 	void sharc1_map(address_map &map);
 	void sound_memmap(address_map &map);
@@ -458,41 +500,41 @@ private:
 
 
 
-READ32_MEMBER(hornet_state::hornet_k037122_sram_r)
+uint32_t hornet_state::hornet_k037122_sram_r(offs_t offset)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	return k037122->sram_r(space, offset, mem_mask);
+	return k037122->sram_r(offset);
 }
 
-WRITE32_MEMBER(hornet_state::hornet_k037122_sram_w)
+void hornet_state::hornet_k037122_sram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	k037122->sram_w(space, offset, data, mem_mask);
+	k037122->sram_w(offset, data, mem_mask);
 }
 
 
-READ32_MEMBER(hornet_state::hornet_k037122_char_r)
+uint32_t hornet_state::hornet_k037122_char_r(offs_t offset)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	return k037122->char_r(space, offset, mem_mask);
+	return k037122->char_r(offset);
 }
 
-WRITE32_MEMBER(hornet_state::hornet_k037122_char_w)
+void hornet_state::hornet_k037122_char_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	k037122->char_w(space, offset, data, mem_mask);
+	k037122->char_w(offset, data, mem_mask);
 }
 
-READ32_MEMBER(hornet_state::hornet_k037122_reg_r)
+uint32_t hornet_state::hornet_k037122_reg_r(offs_t offset)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	return k037122->reg_r(space, offset, mem_mask);
+	return k037122->reg_r(offset);
 }
 
-WRITE32_MEMBER(hornet_state::hornet_k037122_reg_w)
+void hornet_state::hornet_k037122_reg_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	k037122_device *k037122 = m_konppc->get_cgboard_id() ? m_k037122_2 : m_k037122_1;
-	k037122->reg_w(space, offset, data, mem_mask);
+	k037122->reg_w(offset, data, mem_mask);
 }
 
 WRITE_LINE_MEMBER(hornet_state::voodoo_vblank_0)
@@ -511,8 +553,6 @@ uint32_t hornet_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap
 
 	m_k037122_1->tile_draw(screen, bitmap, cliprect);
 
-	draw_7segment_led(bitmap, 3, 3, m_led_reg0);
-	draw_7segment_led(bitmap, 9, 3, m_led_reg1);
 	return 0;
 }
 
@@ -522,14 +562,12 @@ uint32_t hornet_state::screen_update_rscreen(screen_device &screen, bitmap_rgb32
 
 	m_k037122_2->tile_draw(screen, bitmap, cliprect);
 
-	draw_7segment_led(bitmap, 3, 3, m_led_reg0);
-	draw_7segment_led(bitmap, 9, 3, m_led_reg1);
 	return 0;
 }
 
 /*****************************************************************************/
 
-READ8_MEMBER(hornet_state::sysreg_r)
+uint8_t hornet_state::sysreg_r(offs_t offset)
 {
 	uint8_t r = 0;
 
@@ -562,20 +600,20 @@ READ8_MEMBER(hornet_state::sysreg_r)
 		case 4: /* I/O port 4 - DIP switches */
 			r = m_dsw->read();
 			break;
+
+		default:
+			break;
 	}
 	return r;
 }
 
-WRITE8_MEMBER(hornet_state::sysreg_w)
+void hornet_state::sysreg_w(offs_t offset, uint8_t data)
 {
 	switch (offset)
 	{
-		case 0: /* LED Register 0 */
-			m_led_reg0 = data;
-			break;
-
-		case 1: /* LED Register 1 */
-			m_led_reg1 = data;
+		case 0: /* 7seg LEDs on PCB */
+		case 1:
+			m_pcb_digit[offset] = bitswap<8>(~data,7,0,1,2,3,4,5,6) & 0x7f;
 			break;
 
 		case 2: /* Parallel data register */
@@ -657,7 +695,7 @@ WRITE8_MEMBER(hornet_state::sysreg_w)
 
 /*****************************************************************************/
 
-READ8_MEMBER(hornet_state::comm_eeprom_r)
+uint8_t hornet_state::comm_eeprom_r()
 {
 	uint8_t r = 0;
 	r |= (m_lan_eeprom->do_read() & 1) << 1;
@@ -665,18 +703,18 @@ READ8_MEMBER(hornet_state::comm_eeprom_r)
 	return r;
 }
 
-WRITE8_MEMBER(hornet_state::comm_eeprom_w)
+void hornet_state::comm_eeprom_w(uint8_t data)
 {
 	m_eepromout->write(data, 0xff);
 	m_lan_ds2401->write((data >> 4) & 1);
 }
 
-WRITE32_MEMBER(hornet_state::comm1_w)
+void hornet_state::comm1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	printf("comm1_w: %08X, %08X, %08X\n", offset, data, mem_mask);
 }
 
-WRITE32_MEMBER(hornet_state::comm_rombank_w)
+void hornet_state::comm_rombank_w(uint32_t data)
 {
 	int bank = data >> 24;
 	uint8_t *usr3 = memregion("user3")->base();
@@ -684,19 +722,19 @@ WRITE32_MEMBER(hornet_state::comm_rombank_w)
 		membank("bank1")->set_entry(bank & 0x7f);
 }
 
-READ32_MEMBER(hornet_state::comm0_unk_r)
+uint32_t hornet_state::comm0_unk_r(offs_t offset, uint32_t mem_mask)
 {
 //  printf("comm0_unk_r: %08X, %08X\n", offset, mem_mask);
 	return 0xffffffff;
 }
 
 
-READ32_MEMBER(hornet_state::gun_r)
+uint32_t hornet_state::gun_r()
 {
 	return m_gn680_ret0<<16 | m_gn680_ret1;
 }
 
-WRITE32_MEMBER(hornet_state::gun_w)
+void hornet_state::gun_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (mem_mask == 0xffff0000)
 	{
@@ -713,7 +751,7 @@ TIMER_CALLBACK_MEMBER(hornet_state::sound_irq)
 }
 
 
-WRITE16_MEMBER(hornet_state::soundtimer_en_w)
+void hornet_state::soundtimer_en_w(uint16_t data)
 {
 	if (data & 1)
 	{
@@ -728,7 +766,7 @@ WRITE16_MEMBER(hornet_state::soundtimer_en_w)
 	}
 }
 
-WRITE16_MEMBER(hornet_state::soundtimer_count_w)
+void hornet_state::soundtimer_count_w(uint16_t data)
 {
 	// Reset the count
 	m_sound_irq_timer->adjust(attotime::from_usec(m_sound_timer_usec));
@@ -743,22 +781,37 @@ void hornet_state::hornet_map(address_map &map)
 	map(0x74000000, 0x740000ff).rw(FUNC(hornet_state::hornet_k037122_reg_r), FUNC(hornet_state::hornet_k037122_reg_w));
 	map(0x74020000, 0x7403ffff).rw(FUNC(hornet_state::hornet_k037122_sram_r), FUNC(hornet_state::hornet_k037122_sram_w));
 	map(0x74040000, 0x7407ffff).rw(FUNC(hornet_state::hornet_k037122_char_r), FUNC(hornet_state::hornet_k037122_char_w));
-	map(0x74080000, 0x7408000f).rw(FUNC(hornet_state::gun_r), FUNC(hornet_state::gun_w));
 	map(0x78000000, 0x7800ffff).rw(m_konppc, FUNC(konppc_device::cgboard_dsp_shared_r_ppc), FUNC(konppc_device::cgboard_dsp_shared_w_ppc));
 	map(0x780c0000, 0x780c0003).rw(m_konppc, FUNC(konppc_device::cgboard_dsp_comm_r_ppc), FUNC(konppc_device::cgboard_dsp_comm_w_ppc));
 	map(0x7d000000, 0x7d00ffff).r(FUNC(hornet_state::sysreg_r));
 	map(0x7d010000, 0x7d01ffff).w(FUNC(hornet_state::sysreg_w));
 	map(0x7d020000, 0x7d021fff).rw("m48t58", FUNC(timekeeper_device::read), FUNC(timekeeper_device::write));  /* M48T58Y RTC/NVRAM */
 	map(0x7d030000, 0x7d03000f).rw(m_k056800, FUNC(k056800_device::host_r), FUNC(k056800_device::host_w));
+	map(0x7e000000, 0x7e7fffff).rom().region("user2", 0);       /* Data ROM */
+	map(0x7f000000, 0x7f3fffff).rom().region("user1", 0);
+	map(0x7fc00000, 0x7fffffff).rom().region("user1", 0);    /* Program ROM */
+}
+
+void hornet_state::terabrst_map(address_map &map)
+{
+	hornet_map(map);
+	map(0x74080000, 0x7408000f).rw(FUNC(hornet_state::gun_r), FUNC(hornet_state::gun_w));
+}
+
+void hornet_state::sscope_map(address_map &map) //placeholder; may remove if mapping the second ADC12138 isn't necessary
+{
+	hornet_map(map);
+}
+
+void hornet_state::sscope2_map(address_map &map)
+{
+	sscope_map(map);
 	map(0x7d040004, 0x7d040007).rw(FUNC(hornet_state::comm_eeprom_r), FUNC(hornet_state::comm_eeprom_w));
 	map(0x7d042000, 0x7d043fff).ram();             /* COMM BOARD 0 */
 	map(0x7d044000, 0x7d044007).r(FUNC(hornet_state::comm0_unk_r));
 	map(0x7d048000, 0x7d048003).w(FUNC(hornet_state::comm1_w));
 	map(0x7d04a000, 0x7d04a003).w(FUNC(hornet_state::comm_rombank_w));
 	map(0x7d050000, 0x7d05ffff).bankr("bank1");        /* COMM BOARD 1 */
-	map(0x7e000000, 0x7e7fffff).rom().region("user2", 0);       /* Data ROM */
-	map(0x7f000000, 0x7f3fffff).rom().share("share2");
-	map(0x7fc00000, 0x7fffffff).rom().region("user1", 0).share("share2");    /* Program ROM */
 }
 
 /*****************************************************************************/
@@ -777,20 +830,20 @@ void hornet_state::sound_memmap(address_map &map)
 
 /*****************************************************************************/
 
-WRITE16_MEMBER(hornet_state::gn680_sysctrl)
+void hornet_state::gn680_sysctrl(uint16_t data)
 {
 	// bit 15 = watchdog toggle
 	// lower 4 bits = LEDs?
 }
 
-READ16_MEMBER(hornet_state::gn680_latch_r)
+uint16_t hornet_state::gn680_latch_r()
 {
 	m_gn680->set_input_line(M68K_IRQ_6, CLEAR_LINE);
 
 	return m_gn680_latch;
 }
 
-WRITE16_MEMBER(hornet_state::gn680_latch_w)
+void hornet_state::gn680_latch_w(offs_t offset, uint16_t data)
 {
 	if (offset)
 	{
@@ -817,22 +870,22 @@ void hornet_state::gn680_memmap(address_map &map)
 
 /*****************************************************************************/
 
-READ32_MEMBER(hornet_state::dsp_dataram0_r)
+uint32_t hornet_state::dsp_dataram0_r(offs_t offset)
 {
 	return m_sharc_dataram0[offset] & 0xffff;
 }
 
-WRITE32_MEMBER(hornet_state::dsp_dataram0_w)
+void hornet_state::dsp_dataram0_w(offs_t offset, uint32_t data)
 {
 	m_sharc_dataram0[offset] = data;
 }
 
-READ32_MEMBER(hornet_state::dsp_dataram1_r)
+uint32_t hornet_state::dsp_dataram1_r(offs_t offset)
 {
 	return m_sharc_dataram1[offset] & 0xffff;
 }
 
-WRITE32_MEMBER(hornet_state::dsp_dataram1_w)
+void hornet_state::dsp_dataram1_w(offs_t offset, uint32_t data)
 {
 	m_sharc_dataram1[offset] = data;
 }
@@ -864,13 +917,13 @@ void hornet_state::sharc1_map(address_map &map)
 static INPUT_PORTS_START( hornet )
 	PORT_START("IN0")
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_START1 )
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON1 )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 )
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_PLAYER(1)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_PLAYER(1)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_PLAYER(1)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_PLAYER(1)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(1)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_PLAYER(1)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_PLAYER(1)
 
 	PORT_START("IN1")
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_START2 )
@@ -893,39 +946,39 @@ static INPUT_PORTS_START( hornet )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("DSW")
-	PORT_DIPNAME( 0x80, 0x00, "Test Mode" ) PORT_DIPLOCATION("SW:1")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x80, DEF_STR( On ) )
-	PORT_DIPNAME( 0x40, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:2")  // Having this on disables the gun in terabrst and sscope
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x40, DEF_STR( On ) )
-	PORT_DIPNAME( 0x20, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:3")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x20, DEF_STR( On ) )
-	PORT_DIPNAME( 0x10, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:4")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x10, DEF_STR( On ) )
-	PORT_DIPNAME( 0x08, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:5")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x08, DEF_STR( On ) )
-	PORT_DIPNAME( 0x04, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:6")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x04, DEF_STR( On ) )
-	PORT_DIPNAME( 0x02, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:7")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x02, DEF_STR( On ) )
-	PORT_DIPNAME( 0x01, 0x00, "Unknown" ) PORT_DIPLOCATION("SW:8")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x01, DEF_STR( On ) )
+	PORT_DIPNAME( 0x80, 0x00, "Skip Post" ) PORT_DIPLOCATION("SW:1")
+	PORT_DIPSETTING( 0x80, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x40, 0x00, "Disable Machine Init" ) PORT_DIPLOCATION("SW:2") // Having this on disables the analog controls in terabrst, sscope and sscope2
+	PORT_DIPSETTING( 0x40, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) ) //they instead make them usable with JAMMA inputs
+	PORT_DIPNAME( 0x20, 0x20, "DIP3" ) PORT_DIPLOCATION("SW:3")
+	PORT_DIPSETTING( 0x20, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x10, 0x10, "DIP4" ) PORT_DIPLOCATION("SW:4")
+	PORT_DIPSETTING( 0x10, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x08, 0x08, "DIP5" ) PORT_DIPLOCATION("SW:5")
+	PORT_DIPSETTING( 0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x04, 0x04, "DIP6" ) PORT_DIPLOCATION("SW:6")
+	PORT_DIPSETTING( 0x04, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x02, 0x02, "DIP7" ) PORT_DIPLOCATION("SW:7")
+	PORT_DIPSETTING( 0x02, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x01, 0x01, "DIP8" ) PORT_DIPLOCATION("SW:8")
+	PORT_DIPSETTING( 0x01, DEF_STR( Off ) )
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( gradius4 )
 	PORT_INCLUDE( hornet )
 
 	PORT_MODIFY("DSW")
-	PORT_DIPNAME( 0x80, 0x00, "Test Mode" ) PORT_DIPLOCATION("SW:1")
-	PORT_DIPSETTING( 0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING( 0x80, DEF_STR( On ) )
+	PORT_DIPNAME( 0x80, 0x00, "Skip Post" ) PORT_DIPLOCATION("SW:1")
+	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
+	PORT_DIPSETTING( 0x80, DEF_STR( Off ) )
 	PORT_DIPNAME( 0x40, 0x40, "Screen Flip (H)" ) PORT_DIPLOCATION("SW:2")
 	PORT_DIPSETTING( 0x40, DEF_STR( Off ) )
 	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
@@ -956,20 +1009,40 @@ static INPUT_PORTS_START(nbapbp) //Need to add inputs for player 3 and 4.
 	PORT_DIPNAME(0x02, 0x02, "Cabinet Type") PORT_DIPLOCATION("SW:7")
 	PORT_DIPSETTING(0x02, "2 Player")
 	PORT_DIPSETTING(0x00, "4 Player")
+
+/*  PORT_START("IN3")
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_START3 )
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_PLAYER(3)
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_PLAYER(3)
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_PLAYER(3)
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_PLAYER(3)
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(3)
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_PLAYER(3)
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_PLAYER(3)
+
+    PORT_START("IN4")
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_START4 )
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_PLAYER(4)
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_PLAYER(4)
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_PLAYER(4)
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_PLAYER(4)
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(4)
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_PLAYER(4)
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_PLAYER(4) */
 INPUT_PORTS_END
 
-static INPUT_PORTS_START(terabrst) //Uses a ccd camera and sensor for gun inputs much similar to thunderh. Need to hook that up as well as the gun board.
+static INPUT_PORTS_START(terabrst)
 	PORT_INCLUDE(hornet)
 
 	PORT_MODIFY("IN0")
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_BUTTON1) PORT_NAME("P1 Trigger")
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_BUTTON2) PORT_NAME("P1 Bomb")
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_UNUSED)
+	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_BUTTON1) PORT_PLAYER(1) PORT_NAME("P1 Trigger")
+	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_BUTTON2) PORT_PLAYER(1) PORT_NAME("P1 Bomb")
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_BUTTON3) PORT_PLAYER(1) PORT_NAME("P1 Temp Cursor Speedup")
 
 	PORT_MODIFY("IN1")
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_BUTTON1) PORT_PLAYER(2) PORT_NAME("P2 Trigger")
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_BUTTON2) PORT_PLAYER(2) PORT_NAME("P2 Bomb")
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_UNUSED)
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_BUTTON3) PORT_PLAYER(2) PORT_NAME("P2 Temp Cursor Speedup")
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( sscope )
@@ -984,10 +1057,10 @@ static INPUT_PORTS_START( sscope )
 	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("ANALOG1") // Gun Yaw
-	PORT_BIT( 0x7ff, 0x400, IPT_AD_STICK_X ) PORT_MINMAX(0x000, 0x7ff) PORT_SENSITIVITY(35) PORT_KEYDELTA(5)
+	PORT_BIT( 0x7ff, 0x400, IPT_AD_STICK_X ) PORT_MINMAX(0x000, 0x7ff) PORT_SENSITIVITY(35) PORT_KEYDELTA(20)
 
 	PORT_START("ANALOG2") // Gun Pitch
-	PORT_BIT( 0x7ff, 0x3ff, IPT_AD_STICK_Y ) PORT_MINMAX(0x000, 0x7ff) PORT_SENSITIVITY(35) PORT_KEYDELTA(5) PORT_INVERT
+	PORT_BIT( 0x7ff, 0x3ff, IPT_AD_STICK_Y ) PORT_MINMAX(0x000, 0x7ff) PORT_SENSITIVITY(35) PORT_KEYDELTA(20) PORT_INVERT
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( sscope2 )
@@ -1014,6 +1087,8 @@ INPUT_PORTS_END
 
 void hornet_state::machine_start()
 {
+	m_pcb_digit.resolve();
+
 	m_jvs_sdata_ptr = 0;
 	m_jvs_sdata = make_unique_clear<uint8_t[]>(1024);
 
@@ -1023,8 +1098,6 @@ void hornet_state::machine_start()
 	/* configure fast RAM regions for DRC */
 	m_maincpu->ppcdrc_add_fastram(0x00000000, 0x003fffff, false, m_workram);
 
-	save_item(NAME(m_led_reg0));
-	save_item(NAME(m_led_reg1));
 	save_pointer(NAME(m_jvs_sdata), 1024);
 	save_item(NAME(m_jvs_sdata_ptr));
 
@@ -1077,28 +1150,26 @@ void hornet_state::hornet(machine_config &config)
 	m_dsp->set_boot_mode(adsp21062_device::BOOT_MODE_EPROM);
 	m_dsp->set_addrmap(AS_DATA, &hornet_state::sharc0_map);
 
-	config.m_minimum_quantum = attotime::from_hz(6000);
+	config.set_maximum_quantum(attotime::from_hz(6000));
 
 	WATCHDOG_TIMER(config, m_watchdog);
 
 //  PCB description at top doesn't mention any EEPROM on the base board...
 //  EEPROM_93C46_16BIT(config, "eeprom");
 
-	VOODOO_1(config, m_voodoo[0], STD_VOODOO_1_CLOCK);
+	VOODOO_1(config, m_voodoo[0], XTAL(50'000'000));
 	m_voodoo[0]->set_fbmem(2);
-	m_voodoo[0]->set_tmumem(4, 0);
+	m_voodoo[0]->set_tmumem(4,0);
 	m_voodoo[0]->set_screen_tag("screen");
-	m_voodoo[0]->set_cpu_tag("dsp"); // ??
+	m_voodoo[0]->set_cpu_tag("dsp");
 	m_voodoo[0]->vblank_callback().set(FUNC(hornet_state::voodoo_vblank_0));
 
 	K033906(config, "k033906_1", 0, "voodoo0");
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	// Screeen size and timing is re-calculated later in voodoo card
-	screen.set_refresh_hz(60);
-	screen.set_size(64 * 8, 48 * 8);
-	screen.set_visarea(0, 64 * 8 - 1, 0, 48 * 8 - 1);
+	// default 24KHz parameter in both 037122 and voodoo, input clock correct? (58~Hz Vsync, 50MHz/3 or 64MHz/4?)
+	screen.set_raw(XTAL(64'000'000) / 4, 644, 41, 41 + 512, 428, 27, 27 + 384);
 	screen.set_screen_update(FUNC(hornet_state::screen_update));
 
 	PALETTE(config, "palette").set_entries(65536);
@@ -1127,9 +1198,21 @@ void hornet_state::hornet(machine_config &config)
 	m_konppc->set_cbboard_type(konppc_device::CGBOARD_TYPE_HORNET);
 }
 
-void hornet_state::hornet_2board(machine_config &config)
+void hornet_state::terabrst(machine_config &config) //todo: add K056800 from I/O board
 {
 	hornet(config);
+
+	m_maincpu->set_addrmap(AS_PROGRAM, &hornet_state::terabrst_map);
+
+	M68000(config, m_gn680, XTAL(32'000'000) / 2);   /* 16MHz */
+	m_gn680->set_addrmap(AS_PROGRAM, &hornet_state::gn680_memmap);
+}
+
+void hornet_state::sscope(machine_config &config)
+{
+	hornet(config);
+
+	m_maincpu->set_addrmap(AS_PROGRAM, &hornet_state::sscope_map);
 
 	ADSP21062(config, m_dsp2, XTAL(36'000'000));
 	m_dsp2->set_boot_mode(adsp21062_device::BOOT_MODE_EPROM);
@@ -1138,17 +1221,17 @@ void hornet_state::hornet_2board(machine_config &config)
 	m_k037122_1->set_screen("lscreen");
 	m_k037122_1->set_palette("palette");
 
-	K037122(config, m_k037122_2, 0);
+	K037122(config, m_k037122_2, 0); // unknown input clock
 	m_k037122_2->set_screen("rscreen");
 	m_k037122_2->set_palette("palette");
 
 	m_voodoo[0]->set_screen_tag("lscreen");
 
-	VOODOO_1(config, m_voodoo[1], STD_VOODOO_1_CLOCK);
+	VOODOO_1(config, m_voodoo[1], XTAL(50'000'000));
 	m_voodoo[1]->set_fbmem(2);
 	m_voodoo[1]->set_tmumem(4, 0);
 	m_voodoo[1]->set_screen_tag("rscreen");
-	m_voodoo[1]->set_cpu_tag("dsp2"); // ??
+	m_voodoo[1]->set_cpu_tag("dsp2");
 	m_voodoo[1]->vblank_callback().set(FUNC(hornet_state::voodoo_vblank_1));
 
 	K033906(config, "k033906_2", 0, "voodoo1");
@@ -1157,52 +1240,40 @@ void hornet_state::hornet_2board(machine_config &config)
 	config.device_remove("screen");
 
 	screen_device &lscreen(SCREEN(config, "lscreen", SCREEN_TYPE_RASTER));
-	// Screeen size and timing is re-calculated later in voodoo card
-	lscreen.set_refresh_hz(60);
-	lscreen.set_size(512, 384);
-	lscreen.set_visarea(0, 512 - 1, 0, 384 - 1);
+	// default 24KHz parameter in both 037122 and voodoo, input clock correct? (58~Hz Vsync, 50MHz/3 or 64MHz/4?)
+	lscreen.set_raw(XTAL(64'000'000) / 4, 644, 41, 41 + 512, 428, 27, 27 + 384);
 	lscreen.set_screen_update(FUNC(hornet_state::screen_update));
 
-	screen_device &rscreen(SCREEN(config, "rscreen", SCREEN_TYPE_RASTER));
-	// Screeen size and timing is re-calculated later in voodoo card
-	rscreen.set_refresh_hz(60);
-	rscreen.set_size(512, 384);
-	rscreen.set_visarea(0, 512 - 1, 0, 384 - 1);
+	screen_device &rscreen(SCREEN(config, "rscreen", SCREEN_TYPE_RASTER)); // for scope
+	// scope screen is 15khz, verified default parameter in both 037122 and voodoo, input clock correct? (60~Hz Vsync, 50MHz/3 or 64MHz/4?)
+	rscreen.set_raw(XTAL(64'000'000) / 4, 1017, 106, 106 + 768, 262, 17, 17 + 236);
 	rscreen.set_screen_update(FUNC(hornet_state::screen_update_rscreen));
+
+/*  ADC12138(config, m_adc12138_2, 0);
+    m_adc12138->set_ipt_convert_callback(FUNC(hornet_state::sscope_input_callback)); */
 
 	m_konppc->set_num_boards(2);
 }
 
-void hornet_state::terabrst(machine_config &config)
+void hornet_state::sscope2(machine_config &config)
 {
-	hornet(config);
+	sscope(config);
 
-	M68000(config, m_gn680, XTAL(32'000'000) / 2);   /* 16MHz */
-	m_gn680->set_addrmap(AS_PROGRAM, &hornet_state::gn680_memmap);
-}
-
-void hornet_state::hornet_2board_v2(machine_config &config)
-{
-	hornet_2board(config);
+	m_maincpu->set_addrmap(AS_PROGRAM, &hornet_state::sscope2_map);
 
 	VOODOO_2(config.replace(), m_voodoo[0], STD_VOODOO_2_CLOCK);
 	m_voodoo[0]->set_fbmem(2);
-	m_voodoo[0]->set_tmumem(4, 0);
+	m_voodoo[0]->set_tmumem(4,0);
 	m_voodoo[0]->set_screen_tag("lscreen");
-	m_voodoo[0]->set_cpu_tag("dsp"); // ??
+	m_voodoo[0]->set_cpu_tag("dsp");
 	m_voodoo[0]->vblank_callback().set(FUNC(hornet_state::voodoo_vblank_0));
 
 	VOODOO_2(config.replace(), m_voodoo[1], STD_VOODOO_2_CLOCK);
 	m_voodoo[1]->set_fbmem(2);
-	m_voodoo[1]->set_tmumem(4, 0);
+	m_voodoo[1]->set_tmumem(4,0);
 	m_voodoo[1]->set_screen_tag("rscreen");
-	m_voodoo[1]->set_cpu_tag("dsp2"); // ??
+	m_voodoo[1]->set_cpu_tag("dsp2");
 	m_voodoo[1]->vblank_callback().set(FUNC(hornet_state::voodoo_vblank_1));
-}
-
-void hornet_state::sscope2(machine_config &config)
-{
-	hornet_2board_v2(config);
 
 	DS2401(config, "lan_serial_id");
 	EEPROM_93C46_16BIT(config, "lan_eeprom");
@@ -1211,7 +1282,7 @@ void hornet_state::sscope2(machine_config &config)
 
 /*****************************************************************************/
 
-WRITE8_MEMBER(hornet_state::jamma_jvs_w)
+void hornet_state::jamma_jvs_w(uint8_t data)
 {
 	if (m_jvs_sdata_ptr == 0 && data != 0xe0)
 		return;
@@ -1349,22 +1420,11 @@ void hornet_state::jamma_jvs_cmd_exec()
 
 /*****************************************************************************/
 
-
 void hornet_state::init_hornet()
 {
 	m_konppc->set_cgboard_texture_bank(0, "bank5", memregion("user5")->base());
-	m_led_reg0 = m_led_reg1 = 0x7f;
 
-	m_maincpu->ppc4xx_spu_set_tx_handler(write8_delegate(FUNC(hornet_state::jamma_jvs_w), this));
-}
-
-void hornet_state::init_hornet_2board()
-{
-	m_konppc->set_cgboard_texture_bank(0, "bank5", memregion("user5")->base());
-	m_konppc->set_cgboard_texture_bank(1, "bank6", memregion("user5")->base());
-	m_led_reg0 = m_led_reg1 = 0x7f;
-
-	m_maincpu->ppc4xx_spu_set_tx_handler(write8_delegate(FUNC(hornet_state::jamma_jvs_w), this));
+	m_maincpu->ppc4xx_spu_set_tx_handler(write8smo_delegate(*this, FUNC(hornet_state::jamma_jvs_w)));
 }
 
 void hornet_state::init_gradius4()
@@ -1383,6 +1443,22 @@ void hornet_state::init_terabrst()
 {
 	init_hornet();
 	m_dsp->enable_recompiler();
+}
+
+void hornet_state::init_sscope()
+{
+	m_konppc->set_cgboard_texture_bank(0, "bank5", memregion("user5")->base());
+	m_konppc->set_cgboard_texture_bank(1, "bank6", memregion("user5")->base());
+
+	m_maincpu->ppc4xx_spu_set_tx_handler(write8smo_delegate(*this, FUNC(hornet_state::jamma_jvs_w)));
+}
+
+void hornet_state::init_sscope2() //fixme: eventually set sscope2 to load gfx roms from the comm board
+{
+	m_konppc->set_cgboard_texture_bank(0, "bank5", memregion("user5")->base());
+	m_konppc->set_cgboard_texture_bank(1, "bank6", memregion("user5")->base());
+
+	m_maincpu->ppc4xx_spu_set_tx_handler(write8smo_delegate(*this, FUNC(hornet_state::jamma_jvs_w)));
 }
 
 /*****************************************************************************/
@@ -1644,20 +1720,26 @@ ROM_START(terabrsta)
 	ROM_LOAD( "m48t58y-70pc1", 0x000000, 0x002000, CRC(62fecb78) SHA1(09509be8a947cf2d38e12a6ea755ec0de4aa9bd4) )
 ROM_END
 
+} // Anonymous namespace
+
+
 /*************************************************************************/
 
-GAME(  1998, gradius4,  0,        hornet,        gradius4,hornet_state, init_gradius4,      ROT0, "Konami", "Gradius IV: Fukkatsu (ver JAC)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME(  1998, nbapbp,    0,        hornet,        nbapbp,  hornet_state, init_nbapbp,        ROT0, "Konami", "NBA Play By Play (ver JAA)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME(  1998, nbapbpa,   nbapbp,   hornet,        nbapbp,  hornet_state, init_nbapbp,        ROT0, "Konami", "NBA Play By Play (ver AAB)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME(  1998, terabrst,  0,        terabrst,      terabrst,  hornet_state, init_terabrst,      ROT0, "Konami", "Teraburst (1998/07/17 ver UEL)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME(  1998, terabrsta, terabrst, terabrst,      terabrst,  hornet_state, init_terabrst,      ROT0, "Konami", "Teraburst (1998/02/25 ver AAA)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME(  1998, gradius4,  0,        hornet,   gradius4, hornet_state, init_gradius4, ROT0, "Konami", "Gradius IV: Fukkatsu (ver JAC)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME(  1998, nbapbp,    0,        hornet,   nbapbp,   hornet_state, init_nbapbp,   ROT0, "Konami", "NBA Play By Play (ver JAA)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME(  1998, nbapbpa,   nbapbp,   hornet,   nbapbp,   hornet_state, init_nbapbp,   ROT0, "Konami", "NBA Play By Play (ver AAB)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME(  1998, terabrst,  0,        terabrst, terabrst, hornet_state, init_terabrst, ROT0, "Konami", "Teraburst (1998/07/17 ver UEL)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME(  1998, terabrsta, terabrst, terabrst, terabrst, hornet_state, init_terabrst, ROT0, "Konami", "Teraburst (1998/02/25 ver AAA)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 
 // The region comes from the Timekeeper NVRAM, without a valid default all sets except 'xxD, Ver 1.33' will init their NVRAM to UAx versions, the xxD set seems to incorrectly init it to JXD, which isn't a valid
 // version, and thus can't be booted.  If you copy the NVRAM from another already initialized set, it will boot as UAD.
 // to get the actual game to boot you must calibrate the guns etc.
-GAMEL( 2000, sscope,    0,        hornet_2board, sscope,  hornet_state, init_hornet_2board, ROT0, "Konami", "Silent Scope (ver xxD, Ver 1.33)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
-GAMEL( 2000, sscopec,   sscope,   hornet_2board, sscope,  hornet_state, init_hornet_2board, ROT0, "Konami", "Silent Scope (ver xxC, Ver 1.30)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
-GAMEL( 2000, sscopeb,   sscope,   hornet_2board, sscope,  hornet_state, init_hornet_2board, ROT0, "Konami", "Silent Scope (ver xxB, Ver 1.20)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
-GAMEL( 2000, sscopea,   sscope,   hornet_2board, sscope,  hornet_state, init_hornet_2board, ROT0, "Konami", "Silent Scope (ver xxA, Ver 1.00)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
+GAMEL( 1999, sscope,    0,        sscope,  sscope,    hornet_state, init_sscope,  ROT0, "Konami", "Silent Scope (ver xxD, Ver 1.33)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
+GAMEL( 1999, sscopec,   sscope,   sscope,  sscope,    hornet_state, init_sscope,  ROT0, "Konami", "Silent Scope (ver xxC, Ver 1.30)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
+GAMEL( 1999, sscopeb,   sscope,   sscope,  sscope,    hornet_state, init_sscope,  ROT0, "Konami", "Silent Scope (ver xxB, Ver 1.20)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
+GAMEL( 1999, sscopea,   sscope,   sscope,  sscope,    hornet_state, init_sscope,  ROT0, "Konami", "Silent Scope (ver xxA, Ver 1.00)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
 
-GAMEL( 2000, sscope2,   0,        sscope2,       sscope2, hornet_state, init_hornet_2board, ROT0, "Konami", "Silent Scope 2 : Dark Silhouette (ver UAD)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE, layout_dualhsxs )
+GAMEL( 2000, sscope2,   0,        sscope2, sscope2,   hornet_state, init_sscope2, ROT0, "Konami", "Silent Scope 2 : Dark Silhouette (ver UAD)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE | MACHINE_NODEVICE_LAN , layout_dualhsxs )
+//GAMEL( 2000, sscope2e, sscope2, sscope2, sscope2,   hornet_state, init_sscope2, ROT0, "Konami", "Silent Scope 2 : Fatal Judgement (ver EAD)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE | MACHINE_NODEVICE_LAN , layout_dualhsxs )
+//GAMEL( 2000, sscope2j, sscope2  sscope2, sscope2,   hornet_state, init_sscope2, ROT0, "Konami", "Silent Scope 2 : Innocent Sweeper (ver JAD)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE | MACHINE_NODEVICE_LAN , layout_dualhsxs )
+

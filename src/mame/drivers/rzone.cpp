@@ -22,6 +22,7 @@
   1997: R-Zone DataZone: PDA with a built-in SuperScreen.
 
   TODO:
+  - softwarelist? it's impossible right now due to SVG initialization
   - support for SuperScreen. SVG colors will need to be inverted, or maybe
     with artwork or HLSL?
   - add DataZone, will get its own driver
@@ -32,6 +33,7 @@
 #include "includes/hh_sm510.h"
 
 #include "cpu/sm510/sm510.h"
+#include "machine/timer.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -66,13 +68,13 @@ private:
 	DECLARE_WRITE_LINE_MEMBER(sclock_w);
 	DECLARE_READ_LINE_MEMBER(sdata_r);
 
-	DECLARE_WRITE8_MEMBER(t1_write_r);
-	DECLARE_WRITE8_MEMBER(t1_write_s);
-	virtual DECLARE_READ8_MEMBER(input_r) override;
+	void t1_write_r(u8 data);
+	void t1_write_s(u8 data);
+	virtual u8 input_r() override;
 
 	void t2_update_audio();
-	DECLARE_WRITE8_MEMBER(t2_write_r);
-	DECLARE_WRITE8_MEMBER(t2_write_s);
+	void t2_write_r(u8 data);
+	void t2_write_s(u8 data);
 
 	virtual void machine_start() override;
 };
@@ -130,7 +132,7 @@ WRITE_LINE_MEMBER(rzone_state::sctrl_w)
 {
 	// SCTRL: 74165 SH/LD: reload inputs while low
 	if (!state || !m_sctrl)
-		m_inp_mux = m_inp_matrix[0]->read();
+		m_inp_mux = m_inputs[0]->read();
 
 	m_sctrl = state;
 }
@@ -154,7 +156,7 @@ READ_LINE_MEMBER(rzone_state::sdata_r)
 
 // cartridge type 1: simple SM510
 
-WRITE8_MEMBER(rzone_state::t1_write_r)
+void rzone_state::t1_write_r(u8 data)
 {
 	// R1: Audio
 	audio_w(data & 1);
@@ -163,7 +165,7 @@ WRITE8_MEMBER(rzone_state::t1_write_r)
 	sctrl_w(data >> 1 & 1);
 }
 
-WRITE8_MEMBER(rzone_state::t1_write_s)
+void rzone_state::t1_write_s(u8 data)
 {
 	// S1: LED
 	led_w(data & 1);
@@ -172,7 +174,7 @@ WRITE8_MEMBER(rzone_state::t1_write_s)
 	sclock_w(data >> 1 & 1);
 }
 
-READ8_MEMBER(rzone_state::input_r)
+u8 rzone_state::input_r()
 {
 	// K1: SDATA
 	return sdata_r();
@@ -186,14 +188,14 @@ void rzone_state::t2_update_audio()
 	audio_w((m_s >> 2 & 1) | (m_r & 1));
 }
 
-WRITE8_MEMBER(rzone_state::t2_write_r)
+void rzone_state::t2_write_r(u8 data)
 {
 	// R: Audio
 	m_r = data;
 	t2_update_audio();
 }
 
-WRITE8_MEMBER(rzone_state::t2_write_s)
+void rzone_state::t2_write_s(u8 data)
 {
 	// S1: SCTRL
 	sctrl_w(data & 1);
@@ -219,7 +221,7 @@ WRITE8_MEMBER(rzone_state::t2_write_s)
 
 static INPUT_PORTS_START( rzone )
 	PORT_START("IN.0")
-	PORT_BIT( 0x0001, IP_ACTIVE_HIGH, IPT_POWER_ON ) PORT_CHANGED_MEMBER(DEVICE_SELF, hh_sm510_state, input_changed, nullptr)
+	PORT_BIT( 0x0001, IP_ACTIVE_HIGH, IPT_POWER_ON ) PORT_CHANGED_MEMBER(DEVICE_SELF, hh_sm510_state, input_changed, 0)
 	PORT_BIT( 0x0002, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP )
 	PORT_BIT( 0x0004, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT )
 	PORT_BIT( 0x0008, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT )
@@ -247,19 +249,18 @@ void rzone_state::rzbatfor(machine_config &config)
 {
 	/* basic machine hardware */
 	SM512(config, m_maincpu); // no external XTAL
-	m_maincpu->write_segs().set(FUNC(hh_sm510_state::sm510_lcd_segment_w));
+	m_maincpu->write_segs().set(FUNC(rzone_state::sm510_lcd_segment_w));
 	m_maincpu->read_k().set(FUNC(rzone_state::input_r));
 	m_maincpu->write_s().set(FUNC(rzone_state::t2_write_s));
 	m_maincpu->write_r().set(FUNC(rzone_state::t2_write_r));
 
 	/* video hardware */
-	screen_device &screen(SCREEN(config, "screen", "svg"));
-	screen.set_refresh_hz(50);
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen.set_refresh_hz(60);
 	screen.set_size(1368, 1080);
-	screen.set_visarea(0, 1368-1, 0, 1080-1);
+	screen.set_visarea_full();
 
 	TIMER(config, m_led_off).configure_generic(FUNC(rzone_state::led_off_callback));
-	TIMER(config, "display_decay").configure_periodic(FUNC(hh_sm510_state::display_decay_tick), attotime::from_msec(1));
 	config.set_default_layout(layout_rzone);
 
 	/* sound hardware */
@@ -272,19 +273,18 @@ void rzone_state::rztoshden(machine_config &config)
 	/* basic machine hardware */
 	SM510(config, m_maincpu);
 	m_maincpu->set_r_mask_option(sm510_base_device::RMASK_DIRECT);
-	m_maincpu->write_segs().set(FUNC(hh_sm510_state::sm510_lcd_segment_w));
+	m_maincpu->write_segs().set(FUNC(rzone_state::sm510_lcd_segment_w));
 	m_maincpu->read_k().set(FUNC(rzone_state::input_r));
 	m_maincpu->write_s().set(FUNC(rzone_state::t1_write_s));
 	m_maincpu->write_r().set(FUNC(rzone_state::t1_write_r));
 
 	/* video hardware */
-	screen_device &screen(SCREEN(config, "screen", "svg"));
-	screen.set_refresh_hz(50);
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen.set_refresh_hz(60);
 	screen.set_size(1392, 1080);
-	screen.set_visarea(0, 1392-1, 0, 1080-1);
+	screen.set_visarea_full();
 
 	TIMER(config, m_led_off).configure_generic(FUNC(rzone_state::led_off_callback));
-	TIMER(config, "display_decay").configure_periodic(FUNC(hh_sm510_state::display_decay_tick), attotime::from_msec(1));
 	config.set_default_layout(layout_rzone);
 
 	/* sound hardware */
@@ -297,19 +297,18 @@ void rzone_state::rzindy500(machine_config &config)
 	/* basic machine hardware */
 	SM510(config, m_maincpu); // no external XTAL
 	m_maincpu->set_r_mask_option(sm510_base_device::RMASK_DIRECT); // confirmed
-	m_maincpu->write_segs().set(FUNC(hh_sm510_state::sm510_lcd_segment_w));
+	m_maincpu->write_segs().set(FUNC(rzone_state::sm510_lcd_segment_w));
 	m_maincpu->read_k().set(FUNC(rzone_state::input_r));
 	m_maincpu->write_s().set(FUNC(rzone_state::t1_write_s));
 	m_maincpu->write_r().set(FUNC(rzone_state::t1_write_r));
 
 	/* video hardware */
-	screen_device &screen(SCREEN(config, "screen", "svg"));
-	screen.set_refresh_hz(50);
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen.set_refresh_hz(60);
 	screen.set_size(1425, 1080);
-	screen.set_visarea(0, 1425-1, 0, 1080-1);
+	screen.set_visarea_full();
 
 	TIMER(config, m_led_off).configure_generic(FUNC(rzone_state::led_off_callback));
-	TIMER(config, "display_decay").configure_periodic(FUNC(hh_sm510_state::display_decay_tick), attotime::from_msec(1));
 	config.set_default_layout(layout_rzone);
 
 	/* sound hardware */
@@ -332,7 +331,7 @@ ROM_START( rzbatfor )
 	ROM_REGION( 0x100, "maincpu:melody", 0 )
 	ROM_LOAD( "12_02.melody", 0x000, 0x100, CRC(d794746c) SHA1(f0706c5100c090c65fcb2d768b5a5b4a55b29e04) )
 
-	ROM_REGION( 652556, "svg", 0)
+	ROM_REGION( 652556, "screen", 0)
 	ROM_LOAD( "rzbatfor.svg", 0, 652556, CRC(4d850489) SHA1(31a2a1e9209c0f77dbc268cddbfa4a67478734a7) )
 ROM_END
 
@@ -340,7 +339,7 @@ ROM_START( rztoshden )
 	ROM_REGION( 0x1000, "maincpu", 0 ) // model 71-241, SM510 under epoxy (die label ML4)
 	ROM_LOAD( "ml4", 0x0000, 0x1000, CRC(282c641f) SHA1(f94e4a17ffe90adcc6046070034be9b777f72288) )
 
-	ROM_REGION( 857474, "svg", 0)
+	ROM_REGION( 857474, "screen", 0)
 	ROM_LOAD( "rztoshden.svg", 0, 857474, CRC(e4340f84) SHA1(4f040d3c7dc06d66b4f06942e610a64c11e5cd4d) )
 ROM_END
 
@@ -348,7 +347,7 @@ ROM_START( rzindy500 )
 	ROM_REGION( 0x1000, "maincpu", 0 ) // model 71-312, SM510 under epoxy (die label KMS10 22)
 	ROM_LOAD( "10_22", 0x0000, 0x1000, CRC(99a746d0) SHA1(64264499d45a566fa9a0801c20e7fa27eac18da6) )
 
-	ROM_REGION( 533411, "svg", 0)
+	ROM_REGION( 533411, "screen", 0)
 	ROM_LOAD( "rzindy500.svg", 0, 533411, CRC(cfc85677) SHA1(014b9123d81fba1488b4a22a6b6fd0c09e22c1ea) )
 ROM_END
 

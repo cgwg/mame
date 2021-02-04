@@ -6,10 +6,12 @@
 #pragma once
 
 #include "audio/seibu.h"
-#include "machine/seibucop/seibucop.h"
+#include "machine/seibucop.h"
+#include "video/bufsprite.h"
 #include "video/seibu_crtc.h"
 #include "emupal.h"
 #include "screen.h"
+#include "tilemap.h"
 
 #include <algorithm>
 
@@ -62,7 +64,7 @@ protected:
 	std::unique_ptr<u16[]> m_mid_data;
 	std::unique_ptr<u16[]> m_text_data; // private buffers, allocated in init
 	std::unique_ptr<u16[]> m_palette_data;
-	required_shared_ptr<u16> m_spriteram;
+	required_device<buffered_spriteram16_device> m_spriteram;
 	required_device<cpu_device> m_maincpu;
 	optional_device<seibu_sound_device> m_seibu_sound;
 	required_device<gfxdecode_device> m_gfxdecode;
@@ -96,7 +98,7 @@ protected:
 	void foreground_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 	void midground_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 	void text_w(offs_t offset, u16 data, u16 mem_mask = ~0);
-	DECLARE_WRITE16_MEMBER(m_videoram_private_w);
+	void m_videoram_private_w(offs_t offset, uint16_t data);
 
 	void bank_reset(int bgbank, int fgbank, int midbank, int txbank);
 

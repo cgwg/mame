@@ -16,8 +16,6 @@ public:
 	void hyhoo(machine_config &config);
 	void hyhoo2(machine_config &config);
 
-	DECLARE_CUSTOM_INPUT_MEMBER(nb1413m3_busyflag_r);
-
 private:
 	enum
 	{
@@ -43,8 +41,8 @@ private:
 	bitmap_rgb32 m_tmpbitmap;
 	emu_timer *m_blitter_timer;
 
-	DECLARE_WRITE8_MEMBER(hyhoo_blitter_w);
-	DECLARE_WRITE8_MEMBER(hyhoo_romsel_w);
+	void hyhoo_blitter_w(offs_t offset, uint8_t data);
+	void hyhoo_romsel_w(uint8_t data);
 
 	virtual void video_start() override;
 

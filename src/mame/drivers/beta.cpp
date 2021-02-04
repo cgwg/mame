@@ -69,13 +69,13 @@ public:
 protected:
 	virtual void machine_start() override;
 
-	DECLARE_READ8_MEMBER( riot_pa_r );
-	DECLARE_WRITE8_MEMBER( riot_pa_w );
-	DECLARE_READ8_MEMBER( riot_pb_r );
-	DECLARE_WRITE8_MEMBER( riot_pb_w );
+	uint8_t riot_pa_r();
+	void riot_pa_w(uint8_t data);
+	uint8_t riot_pb_r();
+	void riot_pb_w(uint8_t data);
 
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( beta_eprom );
-	DECLARE_DEVICE_IMAGE_UNLOAD_MEMBER( beta_eprom );
+	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(load_beta_eprom);
+	DECLARE_DEVICE_IMAGE_UNLOAD_MEMBER(unload_beta_eprom);
 
 	TIMER_CALLBACK_MEMBER(led_refresh);
 
@@ -166,7 +166,7 @@ TIMER_CALLBACK_MEMBER(beta_state::led_refresh)
 		m_digits[m_ls145_p] = m_segment;
 }
 
-READ8_MEMBER( beta_state::riot_pa_r )
+uint8_t beta_state::riot_pa_r()
 {
 	/*
 
@@ -204,7 +204,7 @@ READ8_MEMBER( beta_state::riot_pa_r )
 	return data;
 }
 
-WRITE8_MEMBER( beta_state::riot_pa_w )
+void beta_state::riot_pa_w(uint8_t data)
 {
 	/*
 
@@ -231,12 +231,12 @@ WRITE8_MEMBER( beta_state::riot_pa_w )
 	m_eprom_data = data;
 }
 
-READ8_MEMBER( beta_state::riot_pb_r )
+uint8_t beta_state::riot_pb_r()
 {
 	return 0;
 }
 
-WRITE8_MEMBER( beta_state::riot_pb_w )
+void beta_state::riot_pb_w(uint8_t data)
 {
 	/*
 
@@ -291,7 +291,7 @@ WRITE8_MEMBER( beta_state::riot_pb_w )
 
 /* EPROM socket */
 
-DEVICE_IMAGE_LOAD_MEMBER( beta_state, beta_eprom )
+DEVICE_IMAGE_LOAD_MEMBER(beta_state::load_beta_eprom)
 {
 	uint32_t size = m_eprom->common_get_size("rom");
 
@@ -307,7 +307,7 @@ DEVICE_IMAGE_LOAD_MEMBER( beta_state, beta_eprom )
 	return image_init_result::PASS;
 }
 
-DEVICE_IMAGE_UNLOAD_MEMBER( beta_state, beta_eprom )
+DEVICE_IMAGE_UNLOAD_MEMBER(beta_state::unload_beta_eprom)
 {
 	if (!image.loaded_through_softlist())
 		image.fwrite(&m_eprom_rom[0], 0x800);
@@ -345,7 +345,8 @@ void beta_state::machine_start()
 
 /* Machine Driver */
 
-MACHINE_CONFIG_START(beta_state::beta)
+void beta_state::beta(machine_config &config)
+{
 	/* basic machine hardware */
 	M6502(config, m_maincpu, XTAL(4'000'000)/4);
 	m_maincpu->set_addrmap(AS_PROGRAM, &beta_state::beta_mem);
@@ -366,14 +367,13 @@ MACHINE_CONFIG_START(beta_state::beta)
 	m6532.irq_wr_callback().set_inputline(m_maincpu, M6502_IRQ_LINE);
 
 	/* EPROM socket */
-	MCFG_GENERIC_CARTSLOT_ADD(EPROM_TAG, generic_plain_slot, nullptr)
-	MCFG_GENERIC_EXTENSIONS("bin,rom")
-	MCFG_GENERIC_LOAD(beta_state, beta_eprom)
-	MCFG_GENERIC_UNLOAD(beta_state, beta_eprom)
+	generic_cartslot_device &cartslot(GENERIC_CARTSLOT(config, EPROM_TAG, generic_plain_slot, nullptr, "bin,rom"));
+	cartslot.set_device_load(FUNC(beta_state::load_beta_eprom));
+	cartslot.set_device_unload(FUNC(beta_state::unload_beta_eprom));
 
 	/* internal ram */
 	RAM(config, RAM_TAG).set_default_size("256");
-MACHINE_CONFIG_END
+}
 
 /* ROMs */
 

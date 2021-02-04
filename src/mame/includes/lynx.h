@@ -171,14 +171,14 @@ private:
 
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	DECLARE_READ8_MEMBER(suzy_read);
-	DECLARE_WRITE8_MEMBER(suzy_write);
-	DECLARE_WRITE8_MEMBER(lynx_uart_w);
-	DECLARE_READ8_MEMBER(lynx_uart_r);
-	DECLARE_READ8_MEMBER(mikey_read);
-	DECLARE_WRITE8_MEMBER(mikey_write);
-	DECLARE_READ8_MEMBER(lynx_memory_config_r);
-	DECLARE_WRITE8_MEMBER(lynx_memory_config_w);
+	uint8_t suzy_read(offs_t offset);
+	void suzy_write(offs_t offset, uint8_t data);
+	void lynx_uart_w(offs_t offset, uint8_t data);
+	uint8_t lynx_uart_r(offs_t offset);
+	uint8_t mikey_read(offs_t offset);
+	void mikey_write(offs_t offset, uint8_t data);
+	uint8_t lynx_memory_config_r();
+	void lynx_memory_config_w(uint8_t data);
 	void lynx_divide();
 	void lynx_multiply();
 	uint8_t lynx_timer_read(int which, int offset);
@@ -189,7 +189,7 @@ private:
 	TIMER_CALLBACK_MEMBER(lynx_uart_loopback_timer);
 	TIMER_CALLBACK_MEMBER(lynx_uart_timer);
 	void lynx_postload();
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( lynx_cart );
+	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(cart_load);
 	uint8_t lynx_read_ram(uint16_t address);
 	void lynx_write_ram(uint16_t address, uint8_t data);
 	inline void lynx_plot_pixel(const int mode, const int16_t x, const int y, const int color);
@@ -204,7 +204,7 @@ private:
 	uint32_t lynx_time_factor(int val);
 	void lynx_uart_reset();
 	image_verify_result lynx_verify_cart(char *header, int kind);
-	DECLARE_QUICKLOAD_LOAD_MEMBER( lynx );
+	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
 };
 
 

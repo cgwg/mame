@@ -34,7 +34,7 @@ PAL16R6A 11H
 #include "speaker.h"
 
 
-READ16_MEMBER( dietgo_state::dietgo_protection_region_0_104_r )
+uint16_t dietgo_state::dietgo_protection_region_0_104_r(offs_t offset)
 {
 	int real_address = 0 + (offset *2);
 	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
@@ -43,7 +43,7 @@ READ16_MEMBER( dietgo_state::dietgo_protection_region_0_104_r )
 	return data;
 }
 
-WRITE16_MEMBER( dietgo_state::dietgo_protection_region_0_104_w )
+void dietgo_state::dietgo_protection_region_0_104_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	int real_address = 0 + (offset *2);
 	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
@@ -183,21 +183,10 @@ static const gfx_layout tile_16x16_layout =
 	32*16
 };
 
-static const gfx_layout spritelayout =
-{
-	16,16,
-	RGN_FRAC(1,1),
-	4,
-	{ 24,8,16,0 },
-	{ STEP8(16*8*4,1), STEP8(0,1) },
-	{ STEP16(0,8*4) },
-	32*32
-};
-
 static GFXDECODE_START( gfx_dietgo )
 	GFXDECODE_ENTRY( "gfx1", 0, tile_8x8_layout,     0, 32 )    /* Tiles (8x8) */
 	GFXDECODE_ENTRY( "gfx1", 0, tile_16x16_layout,   0, 32 )    /* Tiles (16x16) */
-	GFXDECODE_ENTRY( "gfx2", 0, spritelayout,      512, 16 )    /* Sprites (16x16) */
+	GFXDECODE_ENTRY( "gfx2", 0, tile_16x16_layout, 512, 16 )    /* Sprites (16x16) */
 GFXDECODE_END
 
 DECO16IC_BANK_CB_MEMBER(dietgo_state::bank_callback)
@@ -233,14 +222,12 @@ void dietgo_state::dietgo(machine_config &config)
 	DECO16IC(config, m_deco_tilegen, 0);
 	m_deco_tilegen->set_pf1_size(DECO_64x32);
 	m_deco_tilegen->set_pf2_size(DECO_64x32);
-	m_deco_tilegen->set_pf1_trans_mask(0x0f);
-	m_deco_tilegen->set_pf2_trans_mask(0x0f);
 	m_deco_tilegen->set_pf1_col_bank(0x00);
 	m_deco_tilegen->set_pf2_col_bank(0x10);
 	m_deco_tilegen->set_pf1_col_mask(0x0f);
 	m_deco_tilegen->set_pf2_col_mask(0x0f);
-	m_deco_tilegen->set_bank1_callback(FUNC(dietgo_state::bank_callback), this);
-	m_deco_tilegen->set_bank2_callback(FUNC(dietgo_state::bank_callback), this);
+	m_deco_tilegen->set_bank1_callback(FUNC(dietgo_state::bank_callback));
+	m_deco_tilegen->set_bank2_callback(FUNC(dietgo_state::bank_callback));
 	m_deco_tilegen->set_pf12_8x8_bank(0);
 	m_deco_tilegen->set_pf12_16x16_bank(1);
 	m_deco_tilegen->set_gfxdecode_tag("gfxdecode");
@@ -282,8 +269,8 @@ ROM_START( dietgo )
 	ROM_LOAD( "may-00.10a", 0x00000, 0x100000, CRC(234d1f8d) SHA1(42d23aad20df20cbd2359cc12bdd47636b2027d3) )
 
 	ROM_REGION( 0x200000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
-	ROM_LOAD16_BYTE( "may-02.16a", 0x000001, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
+	ROM_LOAD( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
+	ROM_LOAD( "may-02.16a", 0x100000, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
 
 	ROM_REGION( 0x80000, "oki", 0 ) /* Oki samples */
 	ROM_LOAD( "may-03.11l", 0x00000, 0x80000, CRC(b6e42bae) SHA1(c282cdf7db30fb63340cc609bf00f5ab63a75583) )
@@ -306,8 +293,8 @@ ROM_START( dietgoe ) // weird, still version 1.1 but different (earlier) date
 	ROM_LOAD( "may-00.10a", 0x00000, 0x100000, CRC(234d1f8d) SHA1(42d23aad20df20cbd2359cc12bdd47636b2027d3) )
 
 	ROM_REGION( 0x200000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
-	ROM_LOAD16_BYTE( "may-02.16a", 0x000001, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
+	ROM_LOAD( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
+	ROM_LOAD( "may-02.16a", 0x100000, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
 
 	ROM_REGION( 0x80000, "oki", 0 ) /* Oki samples */
 	ROM_LOAD( "may-03.11l", 0x00000, 0x80000, CRC(b6e42bae) SHA1(c282cdf7db30fb63340cc609bf00f5ab63a75583) )
@@ -330,8 +317,8 @@ ROM_START( dietgou )
 	ROM_LOAD( "may-00.10a", 0x00000, 0x100000, CRC(234d1f8d) SHA1(42d23aad20df20cbd2359cc12bdd47636b2027d3) )
 
 	ROM_REGION( 0x200000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
-	ROM_LOAD16_BYTE( "may-02.16a", 0x000001, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
+	ROM_LOAD( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
+	ROM_LOAD( "may-02.16a", 0x100000, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
 
 	ROM_REGION( 0x80000, "oki", 0 ) /* Oki samples */
 	ROM_LOAD( "may-03.11l", 0x00000, 0x80000, CRC(b6e42bae) SHA1(c282cdf7db30fb63340cc609bf00f5ab63a75583) )
@@ -354,8 +341,8 @@ ROM_START( dietgoj )
 	ROM_LOAD( "may-00.10a", 0x00000, 0x100000, CRC(234d1f8d) SHA1(42d23aad20df20cbd2359cc12bdd47636b2027d3) )
 
 	ROM_REGION( 0x200000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
-	ROM_LOAD16_BYTE( "may-02.16a", 0x000001, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
+	ROM_LOAD( "may-01.14a", 0x000000, 0x100000, CRC(2da57d04) SHA1(3898e9fef365ecaa4d86aa11756b527a4fffb494) )
+	ROM_LOAD( "may-02.16a", 0x100000, 0x100000, CRC(3a66a713) SHA1(beeb99156332cf4870738f7769b719a02d7b40af) )
 
 	ROM_REGION( 0x80000, "oki", 0 ) /* Oki samples */
 	ROM_LOAD( "may-03.11l", 0x00000, 0x80000, CRC(b6e42bae) SHA1(c282cdf7db30fb63340cc609bf00f5ab63a75583) )

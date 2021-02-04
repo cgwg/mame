@@ -15,15 +15,15 @@ class wpc_s_state : public driver_device
 {
 public:
 	wpc_s_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-			maincpu(*this, "maincpu"),
-			dcs(*this, "dcs"),
-			rombank(*this, "rombank"),
-			mainram(*this, "mainram"),
-			nvram(*this, "nvram"),
-			pic(*this, "pic"),
-			lamp(*this, "lamp"),
-			out(*this, "out")
+		: driver_device(mconfig, type, tag)
+		, maincpu(*this, "maincpu")
+		, dcs(*this, "dcs")
+		, rombank(*this, "rombank")
+		, mainram(*this, "mainram")
+		, nvram(*this, "nvram")
+		, pic(*this, "pic")
+		, lamp(*this, "lamp")
+		, out(*this, "out")
 	{ }
 
 	void wpc_s(machine_config &config);
@@ -44,16 +44,16 @@ public:
 	void init_tfs();
 
 private:
-	DECLARE_WRITE8_MEMBER(bank_w);
-	DECLARE_WRITE8_MEMBER(watchdog_w);
-	DECLARE_WRITE8_MEMBER(irq_ack_w);
-	DECLARE_READ8_MEMBER(firq_src_r);
-	DECLARE_READ8_MEMBER(zc_r);
-	DECLARE_READ8_MEMBER(dcs_data_r);
-	DECLARE_WRITE8_MEMBER(dcs_data_w);
-	DECLARE_READ8_MEMBER(dcs_ctrl_r);
-	DECLARE_WRITE8_MEMBER(dcs_reset_w);
-	DECLARE_READ8_MEMBER(rtc_r);
+	void bank_w(uint8_t data);
+	void watchdog_w(uint8_t data);
+	void irq_ack_w(uint8_t data);
+	uint8_t firq_src_r();
+	uint8_t zc_r();
+	uint8_t dcs_data_r();
+	void dcs_data_w(uint8_t data);
+	uint8_t dcs_ctrl_r();
+	void dcs_reset_w(uint8_t data);
+	uint8_t rtc_r(offs_t offset);
 
 	DECLARE_WRITE_LINE_MEMBER(scanline_irq);
 	TIMER_DEVICE_CALLBACK_MEMBER(zc_timer);
@@ -140,29 +140,29 @@ void wpc_s_state::wpc_s_map(address_map &map)
 	map(0x8000, 0xffff).rom().region("maincpu", 0x78000);
 }
 
-READ8_MEMBER(wpc_s_state::dcs_data_r)
+uint8_t wpc_s_state::dcs_data_r()
 {
 	return dcs->data_r();
 }
 
-WRITE8_MEMBER(wpc_s_state::dcs_data_w)
+void wpc_s_state::dcs_data_w(uint8_t data)
 {
 	dcs->data_w(data);
 }
 
-READ8_MEMBER(wpc_s_state::dcs_ctrl_r)
+uint8_t wpc_s_state::dcs_ctrl_r()
 {
 	return dcs->control_r();
 }
 
-WRITE8_MEMBER(wpc_s_state::dcs_reset_w)
+void wpc_s_state::dcs_reset_w(uint8_t data)
 {
 	dcs->reset_w(0);
 	dcs->reset_w(1);
 }
 
 
-READ8_MEMBER(wpc_s_state::rtc_r)
+uint8_t wpc_s_state::rtc_r(offs_t offset)
 {
 	system_time systime;
 	machine().base_datetime(systime);
@@ -184,12 +184,12 @@ READ8_MEMBER(wpc_s_state::rtc_r)
 	}
 }
 
-READ8_MEMBER(wpc_s_state::firq_src_r)
+uint8_t wpc_s_state::firq_src_r()
 {
 	return firq_src;
 }
 
-READ8_MEMBER(wpc_s_state::zc_r)
+uint8_t wpc_s_state::zc_r()
 {
 	uint8_t res = zc;
 	zc &= 0x7f;
@@ -201,12 +201,12 @@ TIMER_DEVICE_CALLBACK_MEMBER(wpc_s_state::zc_timer)
 	zc |= 0x80;
 }
 
-WRITE8_MEMBER(wpc_s_state::bank_w)
+void wpc_s_state::bank_w(uint8_t data)
 {
 	rombank->set_entry(data & 0x1f);
 }
 
-WRITE8_MEMBER(wpc_s_state::watchdog_w)
+void wpc_s_state::watchdog_w(uint8_t data)
 {
 	// Mhhh?  Maybe it's not 3ff3, maybe it's going down by itself...
 	maincpu->set_input_line(0, CLEAR_LINE);
@@ -218,7 +218,7 @@ WRITE_LINE_MEMBER(wpc_s_state::scanline_irq)
 	maincpu->set_input_line(1, state);
 }
 
-WRITE8_MEMBER(wpc_s_state::irq_ack_w)
+void wpc_s_state::irq_ack_w(uint8_t data)
 {
 	maincpu->set_input_line(0, CLEAR_LINE);
 	maincpu->set_input_line(1, CLEAR_LINE);
@@ -2033,12 +2033,24 @@ ROM_START(corv_px4)
 	ROM_REGION(0x80000, "maincpu", 0)
 	ROM_LOAD("u6-px4.rom", 0x00000, 0x80000, CRC(a5f22149) SHA1(e0b0bce31b1e66e6b74930c3184f87ebec400f80))
 	ROM_REGION16_LE(0x1000000, "dcs", ROMREGION_ERASEFF)
-	ROM_LOAD16_BYTE("corvsnd2", 0x000000, 0x080000, CRC(630d20a3) SHA1(c7b6cbc7f23c1f9c149a3ef32e84ca8797ff8026))
-	ROM_LOAD16_BYTE("corvsnd3", 0x200000, 0x080000, CRC(6ace0353) SHA1(dec5b6f129ee6b7c0d03c1677d6b71672dd25a5a))
-	ROM_LOAD16_BYTE("corvsnd4", 0x400000, 0x080000, CRC(87807278) SHA1(ba01b44c0ad6d10163a8aed2211539d541e69449))
-	ROM_LOAD16_BYTE("corvsnd5", 0x600000, 0x080000, CRC(35f82c21) SHA1(ee14489e5629e9cd5622a56849fab65b94ff9b59))
-	ROM_LOAD16_BYTE("corvsnd6", 0x800000, 0x080000, CRC(61e56d90) SHA1(41388523fca4839132d3f7e117bdac9ea9f4020c))
-	ROM_LOAD16_BYTE("corvsnd7", 0xa00000, 0x080000, CRC(1417b547) SHA1(851acf77159a1ef99fc2934353eb887065568004))
+	ROM_LOAD16_BYTE("su2-sl1.rom", 0x000000, 0x080000, CRC(141d280e) SHA1(ab1e8e38b9fa0e693837c93616f0821e25b31588))
+	ROM_LOAD16_BYTE("corvsnd3",    0x200000, 0x080000, CRC(6ace0353) SHA1(dec5b6f129ee6b7c0d03c1677d6b71672dd25a5a))
+	ROM_LOAD16_BYTE("corvsnd4",    0x400000, 0x080000, CRC(87807278) SHA1(ba01b44c0ad6d10163a8aed2211539d541e69449))
+	ROM_LOAD16_BYTE("corvsnd5",    0x600000, 0x080000, CRC(35f82c21) SHA1(ee14489e5629e9cd5622a56849fab65b94ff9b59))
+	ROM_LOAD16_BYTE("corvsnd6",    0x800000, 0x080000, CRC(61e56d90) SHA1(41388523fca4839132d3f7e117bdac9ea9f4020c))
+	ROM_LOAD16_BYTE("corvsnd7",    0xa00000, 0x080000, CRC(1417b547) SHA1(851acf77159a1ef99fc2934353eb887065568004))
+ROM_END
+
+ROM_START(corv_px3)
+	ROM_REGION(0x80000, "maincpu", 0)
+	ROM_LOAD("u6-px3.rom", 0x00000, 0x80000, CRC(5a363db8) SHA1(19eea89bf1ab3cc84c5b67eac00d8be4e65249f6))
+	ROM_REGION16_LE(0x1000000, "dcs", ROMREGION_ERASEFF)
+	ROM_LOAD16_BYTE("su2-sp2.rom", 0x000000, 0x080000, CRC(9ae4bf31) SHA1(a33978d9ac8ffdc7b8719c803edd3e804f0dd886))
+	ROM_LOAD16_BYTE("corvsnd3",    0x200000, 0x080000, CRC(6ace0353) SHA1(dec5b6f129ee6b7c0d03c1677d6b71672dd25a5a))
+	ROM_LOAD16_BYTE("corvsnd4",    0x400000, 0x080000, CRC(87807278) SHA1(ba01b44c0ad6d10163a8aed2211539d541e69449))
+	ROM_LOAD16_BYTE("corvsnd5",    0x600000, 0x080000, CRC(35f82c21) SHA1(ee14489e5629e9cd5622a56849fab65b94ff9b59))
+	ROM_LOAD16_BYTE("corvsnd6",    0x800000, 0x080000, CRC(61e56d90) SHA1(41388523fca4839132d3f7e117bdac9ea9f4020c))
+	ROM_LOAD16_BYTE("corvsnd7",    0xa00000, 0x080000, CRC(1417b547) SHA1(851acf77159a1ef99fc2934353eb887065568004))
 ROM_END
 
 ROM_START(corv_la1)
@@ -2423,6 +2435,20 @@ ROM_START(fs_lx4)
 	ROM_LOAD16_BYTE("fs_u9_s.l1", 0xe00000, 0x080000, CRC(0a6664fb) SHA1(751a726e3ea6a808bb137f3563d54acd1580836d))
 ROM_END
 
+ROM_START(fs_lx3)
+	ROM_REGION(0x80000, "maincpu", 0)
+	ROM_LOAD("flin_lx3.rom", 0x00000, 0x80000, CRC(2298c267) SHA1(6536213d758d05d0c85bf39e9ccc34cac1d849d4))
+	ROM_REGION16_LE(0x1000000, "dcs", ROMREGION_ERASEFF)
+	ROM_LOAD16_BYTE("fs_u2_s.l1", 0x000000, 0x080000, CRC(aa3da768) SHA1(b9ab9d716f03c3fa4dc7352993477c021a07138a))
+	ROM_LOAD16_BYTE("fs_u3_s.l1", 0x200000, 0x080000, CRC(e8a0b2d1) SHA1(5fd7ff4a194f845db53573a1a44efbfffed292f9))
+	ROM_LOAD16_BYTE("fs_u4_s.l1", 0x400000, 0x080000, CRC(a5de69f4) SHA1(a7e7f35964ec8b40a971920c2c6cf2ecb730bc60))
+	ROM_LOAD16_BYTE("fs_u5_s.l1", 0x600000, 0x080000, CRC(74b4d495) SHA1(98a145c07694db7b56f5c6ba84bc631fb5c18bae))
+	ROM_LOAD16_BYTE("fs_u6_s.l1", 0x800000, 0x080000, CRC(3c7f7a04) SHA1(45e017dc36922ad2ff420724f912e109a75a15a3))
+	ROM_LOAD16_BYTE("fs_u7_s.l1", 0xa00000, 0x080000, CRC(f32b9271) SHA1(19308cb54ae6fc6343ab7411546b251ba66b0905))
+	ROM_LOAD16_BYTE("fs_u8_s.l1", 0xc00000, 0x080000, CRC(a7aafa3e) SHA1(54dca32dc2bec5432cd3664bb5aa45d367560b96))
+	ROM_LOAD16_BYTE("fs_u9_s.l1", 0xe00000, 0x080000, CRC(0a6664fb) SHA1(751a726e3ea6a808bb137f3563d54acd1580836d))
+ROM_END
+
 /*-------------
 / The Pinball Circus #60020
 /--------------*/
@@ -2754,7 +2780,8 @@ ROM_START(tfs_12)
 ROM_END
 
 GAME(1994,  corv_21,    0,          wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (2.1)",                    MACHINE_MECHANICAL)
-GAME(1994,  corv_px4,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (PX4)",                    MACHINE_MECHANICAL)
+GAME(1994,  corv_px4,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (PX4 Prototype)",          MACHINE_MECHANICAL)
+GAME(1994,  corv_px3,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (PX3 Prototype)",          MACHINE_MECHANICAL)
 GAME(1994,  corv_lx1,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (LX1)",                    MACHINE_MECHANICAL)
 GAME(1994,  corv_lx2,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (LX2)",                    MACHINE_MECHANICAL)
 GAME(1994,  corv_la1,   corv_21,    wpc_s,  corv, wpc_s_state,  init_corv,  ROT0,  "Bally",        "Corvette (LA1)",                    MACHINE_MECHANICAL)
@@ -2785,6 +2812,7 @@ GAME(1994,  rs_lx2,     rs_l6,      wpc_s,  rs,   wpc_s_state,  init_rs,    ROT0
 GAME(1994,  fs_lx5,     0,          wpc_s,  fs,   wpc_s_state,  init_fs,    ROT0,  "Williams",     "The Flintstones (LX-5)",            MACHINE_MECHANICAL)
 GAME(1994,  fs_lx2,     fs_lx5,     wpc_s,  fs,   wpc_s_state,  init_fs,    ROT0,  "Williams",     "The Flintstones (LX-2)",            MACHINE_MECHANICAL)
 GAME(1994,  fs_sp2,     fs_lx5,     wpc_s,  fs,   wpc_s_state,  init_fs,    ROT0,  "Williams",     "The Flintstones (SP-2)",            MACHINE_MECHANICAL)
+GAME(1994,  fs_lx3,     fs_lx5,     wpc_s,  fs,   wpc_s_state,  init_fs,    ROT0,  "Williams",     "The Flintstones (LX-3)",            MACHINE_MECHANICAL)
 GAME(1994,  fs_lx4,     fs_lx5,     wpc_s,  fs,   wpc_s_state,  init_fs,    ROT0,  "Williams",     "The Flintstones (LX-4)",            MACHINE_MECHANICAL)
 GAME(1995,  ts_lx5,     0,          wpc_s,  ts,   wpc_s_state,  init_ts,    ROT0,  "Bally",        "The Shadow (LX-5)",                 MACHINE_MECHANICAL)
 GAME(1995,  ts_lh6,     ts_lx5,     wpc_s,  ts,   wpc_s_state,  init_ts,    ROT0,  "Bally",        "The Shadow (LH-6)",                 MACHINE_MECHANICAL)

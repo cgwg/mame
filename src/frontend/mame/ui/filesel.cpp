@@ -12,8 +12,8 @@
 ***************************************************************************/
 
 #include "emu.h"
-
 #include "ui/filesel.h"
+
 #include "ui/ui.h"
 #include "ui/utils.h"
 
@@ -24,7 +24,9 @@
 #include <cstring>
 #include <locale>
 
+
 namespace ui {
+
 /***************************************************************************
     CONSTANTS
 ***************************************************************************/
@@ -76,18 +78,18 @@ void menu_file_selector::custom_render(void *selectedref, float top, float botto
 {
 	// lay out extra text
 	auto layout = ui().create_layout(container());
-	layout.add_text(m_current_directory.c_str());
+	layout.add_text(m_current_directory);
 
 	// position this extra text
 	float x1, y1, x2, y2;
 	extra_text_position(origx1, origx2, origy1, top, layout, -1, x1, y1, x2, y2);
 
 	// draw a box
-	ui().draw_outlined_box(container(), x1, y1, x2, y2, UI_BACKGROUND_COLOR);
+	ui().draw_outlined_box(container(), x1, y1, x2, y2, ui().colors().background_color());
 
 	// take off the borders
-	x1 += UI_BOX_LR_BORDER;
-	y1 += UI_BOX_TB_BORDER;
+	x1 += ui().box_lr_border() * machine().render().ui_aspect(&container());
+	y1 += ui().box_tb_border();
 
 	size_t hit_start = 0, hit_span = 0;
 	if (is_mouse_hit()
@@ -100,8 +102,8 @@ void menu_file_selector::custom_render(void *selectedref, float top, float botto
 		m_hover_directory = m_current_directory.substr(0, target_dir_end + strlen(PATH_SEPARATOR));
 
 		// highlight the text in question
-		rgb_t fgcolor = UI_MOUSEOVER_COLOR;
-		rgb_t bgcolor = UI_MOUSEOVER_BG_COLOR;
+		rgb_t fgcolor = ui().colors().mouseover_color();
+		rgb_t bgcolor = ui().colors().mouseover_bg_color();
 		layout.restyle(target_dir_start, target_dir_end - target_dir_start, &fgcolor, &bgcolor);
 	}
 	else
@@ -202,7 +204,7 @@ menu_file_selector::file_selector_entry &menu_file_selector::append_entry(
 	entry.fullpath = std::move(entry_fullpath);
 
 	// find the end of the list
-	return *m_entrylist.emplace(m_entrylist.end(), std::move(entry));
+	return m_entrylist.emplace_back(std::move(entry));
 }
 
 
@@ -310,8 +312,8 @@ void menu_file_selector::select_item(const file_selector_entry &entry)
 
 	case SELECTOR_ENTRY_TYPE_DRIVE:
 	case SELECTOR_ENTRY_TYPE_DIRECTORY:
-		// drive/directory - first check the path
 		{
+			// drive/directory - first check the path
 			util::zippath_directory::ptr dir;
 			osd_file::error const err = util::zippath_directory::open(entry.fullpath, dir);
 			if (err != osd_file::error::NONE)
@@ -411,8 +413,7 @@ void menu_file_selector::populate(float &customtop, float &custombottom)
 		selected_entry = &append_entry(SELECTOR_ENTRY_TYPE_SOFTWARE_LIST, "", "");
 
 	// add the drives
-	int i = 0;
-	for (char const *volume_name = osd_get_volume_name(i); volume_name; volume_name = osd_get_volume_name(++i))
+	for (std::string const &volume_name : osd_get_volume_names())
 		append_entry(SELECTOR_ENTRY_TYPE_DRIVE, volume_name, volume_name);
 
 	// mark first filename entry
@@ -421,7 +422,7 @@ void menu_file_selector::populate(float &customtop, float &custombottom)
 	// build the menu for each item
 	if (osd_file::error::NONE != err)
 	{
-		osd_printf_verbose("menu_file_selector::populate: error opening directory '%s' (%d)\n", m_current_directory.c_str(), int(err));
+		osd_printf_verbose("menu_file_selector::populate: error opening directory '%s' (%d)\n", m_current_directory, int(err));
 	}
 	else
 	{
@@ -464,7 +465,7 @@ void menu_file_selector::populate(float &customtop, float &custombottom)
 		set_selection((void *)selected_entry);
 
 	// set up custom render proc
-	customtop = ui().get_line_height() + 3.0f * UI_BOX_TB_BORDER;
+	customtop = ui().get_line_height() + 3.0f * ui().box_tb_border();
 }
 
 
@@ -533,12 +534,12 @@ menu_select_rw::~menu_select_rw()
 
 void menu_select_rw::populate(float &customtop, float &custombottom)
 {
-	item_append(_("Select access mode"), "", FLAG_DISABLE, nullptr);
-	item_append(_("Read-only"), "", 0, itemref_from_result(result::READONLY));
+	item_append(_("Select access mode"), FLAG_DISABLE, nullptr);
+	item_append(_("Read-only"), 0, itemref_from_result(result::READONLY));
 	if (m_can_in_place)
-		item_append(_("Read-write"), "", 0, itemref_from_result(result::READWRITE));
-	item_append(_("Read this image, write to another image"), "", 0, itemref_from_result(result::WRITE_OTHER));
-	item_append(_("Read this image, write to diff"), "", 0, itemref_from_result(result::WRITE_DIFF));
+		item_append(_("Read-write"), 0, itemref_from_result(result::READWRITE));
+	item_append(_("Read this image, write to another image"), 0, itemref_from_result(result::WRITE_OTHER));
+	item_append(_("Read this image, write to diff"), 0, itemref_from_result(result::WRITE_DIFF));
 }
 
 

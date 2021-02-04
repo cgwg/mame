@@ -8,12 +8,11 @@
 
 ***************************************************************************/
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <zlib.h>
 
 #include "unzip.h"
-#include "osdcore.h"
 #include "imgtool.h"
 
 

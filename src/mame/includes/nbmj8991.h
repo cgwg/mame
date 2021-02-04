@@ -46,8 +46,6 @@ public:
 	void init_tokyogal();
 	void init_finalbny();
 
-	DECLARE_CUSTOM_INPUT_MEMBER(nb1413m3_busyflag_r);
-
 private:
 	required_device<cpu_device> m_maincpu;
 	optional_device<cpu_device> m_audiocpu;
@@ -83,13 +81,13 @@ private:
 	int m_flipscreen_old;
 	emu_timer *m_blitter_timer;
 
-	DECLARE_WRITE8_MEMBER(soundbank_w);
-	DECLARE_WRITE8_MEMBER(palette_type1_w);
-	DECLARE_WRITE8_MEMBER(palette_type2_w);
-	DECLARE_WRITE8_MEMBER(palette_type3_w);
-	DECLARE_WRITE8_MEMBER(blitter_w);
-	DECLARE_READ8_MEMBER(clut_r);
-	DECLARE_WRITE8_MEMBER(clut_w);
+	void soundbank_w(uint8_t data);
+	void palette_type1_w(offs_t offset, uint8_t data);
+	void palette_type2_w(offs_t offset, uint8_t data);
+	void palette_type3_w(offs_t offset, uint8_t data);
+	void blitter_w(offs_t offset, uint8_t data);
+	uint8_t clut_r(offs_t offset);
+	void clut_w(offs_t offset, uint8_t data);
 
 	virtual void machine_reset() override;
 	virtual void video_start() override;

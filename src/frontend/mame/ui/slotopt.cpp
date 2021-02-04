@@ -115,7 +115,7 @@ void menu_slot_devices::set_slot_device(device_slot_interface &slot, const char 
 
 void menu_slot_devices::record_current_options()
 {
-	for (device_slot_interface &slot : slot_interface_iterator(m_config->root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(m_config->root_device()))
 	{
 		// we're doing this out of a desire to honor user-selectable options; therefore it only
 		// makes sense to record values for selectable options
@@ -177,7 +177,7 @@ void menu_slot_devices::populate(float &customtop, float &custombottom)
 	m_config = std::make_unique<machine_config>(machine().system(), machine().options());
 
 	// cycle through all devices for this system
-	for (device_slot_interface &slot : slot_interface_iterator(m_config->root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(m_config->root_device()))
 	{
 		// does this slot have any selectable options?
 		bool has_selectable_options = slot.has_selectable_options();
@@ -200,10 +200,10 @@ void menu_slot_devices::populate(float &customtop, float &custombottom)
 		item_append(slot.slot_name(), opt_name, item_flags, (void *)&slot);
 	}
 	item_append(menu_item_type::SEPARATOR);
-	item_append(_("Reset"), "", 0, ITEMREF_RESET);
+	item_append(_("Reset"), 0, ITEMREF_RESET);
 
 	// leave space for the name of the current option at the bottom
-	custombottom = ui().get_line_height() + 3.0f * UI_BOX_TB_BORDER;
+	custombottom = ui().get_line_height() + 3.0f * ui().box_tb_border();
 }
 
 
@@ -220,9 +220,9 @@ void menu_slot_devices::custom_render(void *selectedref, float top, float bottom
 		char const *const text[] = { option ? option->devtype().fullname() : _("[empty slot]") };
 		draw_text_box(
 				std::begin(text), std::end(text),
-				origx1, origx2, origy2 + UI_BOX_TB_BORDER, origy2 + bottom,
+				origx1, origx2, origy2 + ui().box_tb_border(), origy2 + bottom,
 				ui::text_layout::CENTER, ui::text_layout::TRUNCATE, false,
-				UI_TEXT_COLOR, UI_BACKGROUND_COLOR, 1.0f);
+				ui().colors().text_color(), ui().colors().background_color(), 1.0f);
 	}
 }
 

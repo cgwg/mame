@@ -23,6 +23,8 @@
 #include "gts80b.lh"
 
 
+namespace {
+
 class gts80b_state : public genpin_class
 {
 public:
@@ -43,14 +45,18 @@ public:
 
 	void init_gts80b();
 
+protected:
+	virtual void machine_reset() override;
+	virtual void machine_start() override { m_digits.resolve(); }
+
 private:
-	DECLARE_READ8_MEMBER(port1a_r);
-	DECLARE_READ8_MEMBER(port2a_r);
-	DECLARE_WRITE8_MEMBER(port1b_w);
-	DECLARE_WRITE8_MEMBER(port2a_w);
-	DECLARE_WRITE8_MEMBER(port2b_w);
-	DECLARE_WRITE8_MEMBER(port3a_w);
-	DECLARE_WRITE8_MEMBER(port3b_w);
+	uint8_t port1a_r();
+	uint8_t port2a_r();
+	void port1b_w(uint8_t data);
+	void port2a_w(uint8_t data);
+	void port2b_w(uint8_t data);
+	void port3a_w(uint8_t data);
+	void port3b_w(offs_t offset, uint8_t data);
 	void gts80b_map(address_map &map);
 
 	uint8_t m_dispcmd;
@@ -60,8 +66,7 @@ private:
 	uint8_t m_swrow;
 	bool m_in_cmd_mode[2];
 	uint8_t m_digit[2];
-	virtual void machine_reset() override;
-	virtual void machine_start() override { m_digits.resolve(); }
+
 	required_device<cpu_device> m_maincpu;
 	optional_device<gottlieb_sound_r0_device> m_r0_sound;
 	optional_device<gottlieb_sound_r1_device> m_r1_sound;
@@ -80,6 +85,7 @@ void gts80b_state::gts80b_map(address_map &map)
 	map(0x2000, 0x2fff).rom();
 	map(0x3000, 0x3fff).rom();
 }
+
 
 static INPUT_PORTS_START( gts80b )
 	PORT_START("DSW.0")
@@ -289,7 +295,7 @@ static const uint16_t patterns[] = {
 	/* 0x78-0x7f */ 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
 };
 
-READ8_MEMBER( gts80b_state::port1a_r )
+uint8_t gts80b_state::port1a_r()
 {
 	char kbdrow[8];
 	uint8_t data = 0;
@@ -307,18 +313,18 @@ READ8_MEMBER( gts80b_state::port1a_r )
 	return data;
 }
 
-READ8_MEMBER( gts80b_state::port2a_r )
+uint8_t gts80b_state::port2a_r()
 {
 	return m_port2a | 0x80; // slam tilt off
 }
 
 // sw strobes
-WRITE8_MEMBER( gts80b_state::port1b_w )
+void gts80b_state::port1b_w(uint8_t data)
 {
 	m_swrow = data;
 }
 
-WRITE8_MEMBER( gts80b_state::port2a_w )
+void gts80b_state::port2a_w(uint8_t data)
 {
 	m_port2a = data;
 	if (BIT(data, 4))
@@ -328,7 +334,7 @@ WRITE8_MEMBER( gts80b_state::port2a_w )
 }
 
 //d0-3 data; d4-5 = which display enabled; d6 = display reset; d7 = dipsw enable
-WRITE8_MEMBER( gts80b_state::port2b_w )
+void gts80b_state::port2b_w(uint8_t data)
 {
 	m_port2b = data & 15;
 	uint16_t segment;
@@ -362,17 +368,17 @@ WRITE8_MEMBER( gts80b_state::port2b_w )
 }
 
 // solenoids
-WRITE8_MEMBER( gts80b_state::port3a_w )
+void gts80b_state::port3a_w(uint8_t data)
 {
 }
 
 //pb0-3 = sound; pb4-7 = lamprow
-WRITE8_MEMBER( gts80b_state::port3b_w )
+void gts80b_state::port3b_w(offs_t offset, uint8_t data)
 {
 	uint8_t sndcmd = data & 15;
 	m_lamprow = data >> 4;
 	if (m_r0_sound)
-		m_r0_sound->write(space, offset, sndcmd);
+		m_r0_sound->write(offset, sndcmd);
 	if (m_r1_sound)
 		m_r1_sound->write(sndcmd);
 }
@@ -381,6 +387,9 @@ void gts80b_state::machine_reset()
 {
 	m_in_cmd_mode[0] = false;
 	m_in_cmd_mode[1] = false;
+	m_dispcmd = 0;
+	m_digit[0] = 0;
+	m_digit[1] = 0;
 }
 
 void gts80b_state::init_gts80b()
@@ -824,6 +833,17 @@ ROM_END
 ROM_START(triplaya)
 	ROM_REGION(0x10000, "maincpu", 0)
 	ROM_LOAD("prom1a.cpu", 0x2000, 0x2000, CRC(fc2145cb) SHA1(f7b9648c533997e9f777a8b40dad9852f26abd9a))
+	ROM_RELOAD(0x6000, 0x2000)
+	ROM_RELOAD(0xa000, 0x2000)
+	ROM_RELOAD(0xe000, 0x2000)
+
+	ROM_REGION(0x1000, "r0sound:audiocpu", 0)
+	ROM_LOAD("696-s.snd", 0x0800, 0x0800, CRC(deedea61) SHA1(6aec221397f250d5dd99faefa313e8028c8818f7))
+ROM_END
+
+ROM_START(triplayg)
+	ROM_REGION(0x10000, "maincpu", 0)
+	ROM_LOAD("prom1g.cpu", 0x2000, 0x2000, CRC(5e2bf7a9) SHA1(fdbec615b22416bb4b2e712d47c54c945d849252))
 	ROM_RELOAD(0x6000, 0x2000)
 	ROM_RELOAD(0xa000, 0x2000)
 	ROM_RELOAD(0xe000, 0x2000)
@@ -1742,10 +1762,62 @@ ROM_START(s80btest)
 	ROM_LOAD("testd.snd", 0x8000, 0x2000, CRC(5d04a6d9) SHA1(f83bd8692146af7d234c1a32d0b688e76d1b2b85))
 ROM_END
 
+/*-------------------------------------------------------------------
+/ Master (ManilaMatic)
+/
+/ Notes from one of the PinMAME devs:
+/ It's a Gottlieb System 80B clone of "Genesis" more or less;
+/ they only swapped in Italian texts and maybe changed some game rules.
+/ The main CPU board is using a 6502 CPU with all 16 address lines
+/ (System 80B only used 14), 2K of static RAM, and a 27256 EPROM.
+/
+/ Obviously they forgot to adjust the ROM checksums of the game
+/ because it reports an error when running the memory test.
+/ The game works just fine however, and when comparing the game code
+/ to the Genesis one, it's identical for the most part.
+/
+/ TODO: implement different memory map
+/-------------------------------------------------------------------*/
+
+ROM_START(mmmaster)
+	ROM_REGION(0x10000, "maincpu", 0)
+	ROM_LOAD("gprom.cpu", 0x0000, 0x8000, CRC(0ffacb1d) SHA1(c609f49e0933ceb3d7eb1725a3ba0f1486978bd6))
+	ROM_RELOAD(0x8000, 0x8000)
+
+	ROM_REGION(0x10000, "cpu3", 0)
+	ROM_LOAD("drom1.snd",0xe000,0x2000, CRC(758e1743) SHA1(6df3011c044796afcd88e52d1ca69692cb489ff4))
+
+	ROM_REGION(0x10000, "cpu2", 0)
+	ROM_LOAD("yrom1.snd",0xe000,0x2000, CRC(4869b0ec) SHA1(b8a56753257205af56e06105515b8a700bb1935b))
+	ROM_LOAD("yrom2.snd",0xc000,0x2000, CRC(0528c024) SHA1(d24ff7e088b08c1f35b54be3c806f8a8757d96c7))
+ROM_END
+
+/*-------------------------------------------------------------------
+/ Top Sound (ManilaMatic)
+/-------------------------------------------------------------------*/
+
+ROM_START(topsound)
+	ROM_REGION(0x10000, "maincpu", 0)
+	ROM_LOAD("mm_ts_1.cpu", 0x6000, 0x2000, CRC(8ade048f) SHA1(f8527d99461b61a865023e0576ac5a9d33e4f0b0))
+	ROM_LOAD("mm_ts_2.cpu", 0x2000, 0x2000, CRC(a525aac8) SHA1(9389688e053beb7db45278524c4d62cf067f817d))
+	ROM_RELOAD(0xe000, 0x2000)
+
+	ROM_REGION(0x10000, "cpu3", 0)
+	ROM_LOAD("drom1a.snd",0xe000,0x2000, CRC(b8aa8912) SHA1(abff690256c0030807b2d4dfa0516496516384e8))
+
+	ROM_REGION(0x10000, "cpu2", 0)
+	ROM_LOAD("yrom1a.snd",0xe000,0x2000, CRC(a62e3b94) SHA1(59636c2ac7ebbd116a0eb39479c97299ba391906))
+	ROM_LOAD("yrom2a.snd",0xc000,0x2000, CRC(66645a3f) SHA1(f06261af81e6b1829d639933297d2461a8c993fc))
+ROM_END
+
+} // Anonymous namespace
+
+
 GAME(1985, bountyh,   0,        gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Bounty Hunter",                             MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, bountyhg,  bountyh,  gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Bounty Hunter (German)",                    MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, triplay,   0,        gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Chicago Cubs' Triple Play",                 MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, triplaya,  triplay,  gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Chicago Cubs' Triple Play (alternate set)", MACHINE_IS_SKELETON_MECHANICAL)
+GAME(1985, triplayg,  triplay,  gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Chicago Cubs' Triple Play (German)",        MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, rock,      0,        gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Rock",                                      MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, rockg,     rock,     gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Rock (German)",                             MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1985, tagteamp,  0,        gts80b_s,  gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Tag-Team Wrestling",                        MACHINE_IS_SKELETON_MECHANICAL)
@@ -1810,3 +1882,5 @@ GAME(1989, nmoves,    0,        gts80b_s2, gts80b, gts80b_state, init_gts80b, RO
 GAME(1987, amazonh3,  0,        gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Amazon Hunt III (French)",                  MACHINE_IS_SKELETON_MECHANICAL)
 GAME(1987, amazonh3a, amazonh3, gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "Amazon Hunt III (rev. 1, French)",          MACHINE_IS_SKELETON_MECHANICAL)
 GAME(198?, s80btest,  0,        gts80b_s2, gts80b, gts80b_state, init_gts80b, ROT0, "Gottlieb",               "System 80B Test",                           MACHINE_IS_SKELETON_MECHANICAL)
+GAME(1988, mmmaster,  0,        gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "ManilaMatic",            "Master",                                    MACHINE_IS_SKELETON_MECHANICAL)
+GAME(1988, topsound,  0,        gts80b_s1, gts80b, gts80b_state, init_gts80b, ROT0, "ManilaMatic",            "Top Sound (French)",                        MACHINE_IS_SKELETON_MECHANICAL)

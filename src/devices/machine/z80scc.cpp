@@ -428,13 +428,13 @@ z80scc_device::z80scc_device(const machine_config &mconfig, device_type type, co
 	m_txca(0),
 	m_rxcb(0),
 	m_txcb(0),
-	m_out_txd_cb{ { *this }, { *this } },
-	m_out_dtr_cb{ { *this }, { *this } },
-	m_out_rts_cb{ { *this }, { *this } },
-	m_out_wreq_cb{ { *this }, { *this } },
-	m_out_sync_cb{ { *this }, { *this } },
-	m_out_rxdrq_cb{ { *this }, { *this } },
-	m_out_txdrq_cb{ { *this }, { *this } },
+	m_out_txd_cb(*this),
+	m_out_dtr_cb(*this),
+	m_out_rts_cb(*this),
+	m_out_wreq_cb(*this),
+	m_out_sync_cb(*this),
+	m_out_rxdrq_cb(*this),
+	m_out_txdrq_cb(*this),
 	m_out_int_cb(*this),
 	m_out_int_state(CLEAR_LINE),
 	m_variant(variant),
@@ -493,20 +493,13 @@ void z80scc_device::device_resolve_objects()
 	LOG("%s\n", FUNCNAME);
 
 	// resolve callbacks
-	m_out_txd_cb[CHANNEL_A].resolve_safe();
-	m_out_dtr_cb[CHANNEL_A].resolve_safe();
-	m_out_rts_cb[CHANNEL_A].resolve_safe();
-	m_out_wreq_cb[CHANNEL_A].resolve_safe();
-	m_out_sync_cb[CHANNEL_A].resolve_safe();
-	m_out_txd_cb[CHANNEL_B].resolve_safe();
-	m_out_dtr_cb[CHANNEL_B].resolve_safe();
-	m_out_rts_cb[CHANNEL_B].resolve_safe();
-	m_out_wreq_cb[CHANNEL_B].resolve_safe();
-	m_out_sync_cb[CHANNEL_B].resolve_safe();
-	m_out_rxdrq_cb[CHANNEL_A].resolve_safe();
-	m_out_txdrq_cb[CHANNEL_A].resolve_safe();
-	m_out_rxdrq_cb[CHANNEL_B].resolve_safe();
-	m_out_txdrq_cb[CHANNEL_B].resolve_safe();
+	m_out_txd_cb.resolve_all_safe();
+	m_out_dtr_cb.resolve_all_safe();
+	m_out_rts_cb.resolve_all_safe();
+	m_out_wreq_cb.resolve_all_safe();
+	m_out_sync_cb.resolve_all_safe();
+	m_out_rxdrq_cb.resolve_all_safe();
+	m_out_txdrq_cb.resolve_all_safe();
 	m_out_int_cb.resolve_safe();
 }
 
@@ -634,7 +627,7 @@ int z80scc_device::z80daisy_irq_ack()
 			elem = Z80_DAISY_IEO; // Set IUS bit (called IEO in z80 daisy lingo)
 			check_interrupts();
 			LOGINT(" - Found an INT request, ");
-			if (m_wr9 & WR9_BIT_VIS)
+			if (m_wr9 & WR9_BIT_NV)
 			{
 				LOGINT("but WR9 D1 set to use autovector, returning the default vector\n");
 				break;
@@ -731,6 +724,7 @@ uint8_t z80scc_device::modify_vector(uint8_t vec, int i, uint8_t src)
 	// Modify vector according to Hi/lo bit of WR9
 	if (m_wr9 & WR9_BIT_SHSL) // Affect V4-V6
 	{
+		src = bitswap<4>(src, 3, 0, 1, 2); // order switched (see table above)
 		vec &= 0x8f;
 		vec |= src << 4;
 	}
@@ -859,7 +853,7 @@ int z80scc_device::m1_r()
 //-------------------------------------------------
 //  zbus_r - Z-Bus read
 //-------------------------------------------------
-READ8_MEMBER( z80scc_device::zbus_r )
+uint8_t z80scc_device::zbus_r(offs_t offset)
 {
 	offset &= 31;
 	bool ba = BIT(offset, 4);
@@ -890,7 +884,7 @@ READ8_MEMBER( z80scc_device::zbus_r )
 //-------------------------------------------------
 //  zbus_w - Z-Bus write
 //-------------------------------------------------
-WRITE8_MEMBER( z80scc_device::zbus_w )
+void z80scc_device::zbus_w(offs_t offset, uint8_t data)
 {
 	offset &= 31;
 	bool ba = BIT(offset, 4);
@@ -927,177 +921,88 @@ WRITE8_MEMBER( z80scc_device::zbus_w )
 }
 
 //-------------------------------------------------
-//  cd_ab_r - Universal Bus read
+//  dc_ab_r - Universal Bus read
 //-------------------------------------------------
-READ8_MEMBER( z80scc_device::cd_ab_r )
+uint8_t z80scc_device::z80scc_device::dc_ab_r(offs_t offset)
 {
-	int ba = BIT(offset, 0);
-	int cd = BIT(offset, 1);
-	z80scc_channel *channel = ba ? m_chanA : m_chanB;
+	int ab = BIT(offset, 0);
+	int dc = BIT(offset, 1);
+	z80scc_channel *channel = ab ? m_chanA : m_chanB;
 
 	/* Expell non-Universal Bus variants */
 	if ( !(m_variant & SET_Z85X3X))
 	{
-		logerror(" cd_ab_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
+		logerror(" dc_ab_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
 		return 0;
 	}
 
-	//    LOG("z80scc_device::cd_ba_r ba:%02x cd:%02x\n", ba, cd);
-	return cd ? channel->data_read() : channel->control_read();
+	//    LOG("z80scc_device::dc_ab_r ab:%02x dc:%02x\n", ab, dc);
+	return dc ? channel->data_read() : channel->control_read();
 }
 
 //-------------------------------------------------
-//  cd_ab_w - Universal Bus write
+//  dc_ab_w - Universal Bus write
 //-------------------------------------------------
-WRITE8_MEMBER( z80scc_device::cd_ab_w )
+void z80scc_device::dc_ab_w(offs_t offset, uint8_t data)
 {
-	int ba = BIT(offset, 0);
-	int cd = BIT(offset, 1);
-	z80scc_channel *channel = ba ? m_chanA : m_chanB;
+	int ab = BIT(offset, 0);
+	int dc = BIT(offset, 1);
+	z80scc_channel *channel = ab ? m_chanA : m_chanB;
 
 	/* Expell non-Universal Bus variants */
 	if ( !(m_variant & SET_Z85X3X) )
 	{
-		logerror(" cd_ab_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
+		logerror(" dc_ab_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
 		return;
 	}
 
-	LOG(" cd_ab_w %02x => ba:%02x cd:%02x (ofs %d)\n", data, ba, cd, offset&3);
-	if (cd)
+	LOG(" dc_ab_w %02x => ab:%02x dc:%02x (ofs %d)\n", data, ab, dc, offset&3);
+	if (dc)
 		channel->data_write(data);
 	else
 		channel->control_write(data);
 }
 
 //-------------------------------------------------
-//  cd_ba_r - Universal Bus read
+//  ab_dc_r - Universal Bus read
 //-------------------------------------------------
-READ8_MEMBER( z80scc_device::cd_ba_r )
+uint8_t z80scc_device::ab_dc_r(offs_t offset)
 {
-	int ba = BIT(offset, 0);
-	int cd = BIT(offset, 1);
-	z80scc_channel *channel = ba ? m_chanB : m_chanA;
+	int ab = BIT(offset, 1);
+	int dc = BIT(offset, 0);
+	z80scc_channel *channel = ab ? m_chanA : m_chanB;
 
 	/* Expell non-Universal Bus variants */
-	if ( !(m_variant & SET_Z85X3X))
+	if ( !(m_variant & SET_Z85X3X) )
 	{
-		logerror(" cd_ba_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
+		logerror(" ab_dc_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
 		return 0;
 	}
 
-	//    LOG("z80scc_device::cd_ba_r ba:%02x cd:%02x\n", ba, cd);
-	return cd ? channel->control_read() : channel->data_read();
+	//    LOG("z80scc_device::ab_dc_r ab:%02x dc:%02x\n", ab, dc);
+	return dc ? channel->data_read() : channel->control_read();
 }
 
+
 //-------------------------------------------------
-//  cd_ba_w - Universal Bus write
+//  ab_dc_w - Universal Bus read
 //-------------------------------------------------
-WRITE8_MEMBER( z80scc_device::cd_ba_w )
+void z80scc_device::ab_dc_w(offs_t offset, uint8_t data)
 {
-	int ba = BIT(offset, 0);
-	int cd = BIT(offset, 1);
-	z80scc_channel *channel = ba ? m_chanB : m_chanA;
+	int ab = BIT(offset, 1);
+	int dc = BIT(offset, 0);
+	z80scc_channel *channel = ab ? m_chanA : m_chanB;
 
 	/* Expell non-Universal Bus variants */
 	if ( !(m_variant & SET_Z85X3X) )
 	{
-		logerror(" cd_ba_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
+		logerror(" ab_dc_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
 		return;
 	}
 
-	//    LOG("z80scc_device::cd_ba_w ba:%02x cd:%02x\n", ba, cd);
-	if (cd)
-		channel->control_write(data);
-	else
-		channel->data_write(data);
-}
+	LOG("z80scc_device::ab_dc_w ab:%02x dc:%02x\n", ab, dc);
 
-
-//-------------------------------------------------
-//  ba_cd_r - Universal Bus read
-//-------------------------------------------------
-READ8_MEMBER( z80scc_device::ba_cd_r )
-{
-	int ba = BIT(offset, 1);
-	int cd = BIT(offset, 0);
-	z80scc_channel *channel = ba ? m_chanB : m_chanA;
-
-	/* Expell non-Universal Bus variants */
-	if ( !(m_variant & SET_Z85X3X) )
-	{
-		logerror(" ba_cd_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
-		return 0;
-	}
-
-	//    LOG("z80scc_device::ba_cd_r ba:%02x cd:%02x\n", ba, cd);
-	return cd ? channel->control_read() : channel->data_read();
-}
-
-
-//-------------------------------------------------
-//  ba_cd_w - Universal Bus write
-//-------------------------------------------------
-WRITE8_MEMBER( z80scc_device::ba_cd_w )
-{
-	int ba = BIT(offset, 1);
-	int cd = BIT(offset, 0);
-	z80scc_channel *channel = ba ? m_chanB : m_chanA;
-
-	/* Expell non-Universal Bus variants */
-	if ( !(m_variant & SET_Z85X3X) )
-	{
-		logerror(" ba_cd_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
-		return;
-	}
-
-	LOG("z80scc_device::ba_cd_w ba:%02x cd:%02x\n", ba, cd);
-
-	if (cd)
-		channel->control_write(data);
-	else
-		channel->data_write(data);
-}
-
-//-------------------------------------------------
-//  ba_cd_inv_r - Universal Bus read
-//-------------------------------------------------
-READ8_MEMBER( z80scc_device::ba_cd_inv_r )
-{
-	int ba = BIT(offset, 1);
-	int cd = BIT(offset, 0);
-	z80scc_channel *channel = ba ? m_chanA : m_chanB;
-
-	/* Expell non-Universal Bus variants */
-	if ( !(m_variant & SET_Z85X3X) )
-	{
-		logerror(" ba_cd_inv_r not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
-		return 0;
-	}
-
-	//    LOG("z80scc_device::ba_cd_inv_r ba:%02x cd:%02x\n", ba, cd);
-	return cd ? channel->data_read() : channel->control_read();
-}
-
-
-//-------------------------------------------------
-//  ba_cd_inv_w - Universal Bus read
-//-------------------------------------------------
-WRITE8_MEMBER( z80scc_device::ba_cd_inv_w )
-{
-	int ba = BIT(offset, 1);
-	int cd = BIT(offset, 0);
-	z80scc_channel *channel = ba ? m_chanA : m_chanB;
-
-	/* Expell non-Universal Bus variants */
-	if ( !(m_variant & SET_Z85X3X) )
-	{
-		logerror(" ba_cd_inv_w not supported by this device variant, you should probably use combinations of c*_r/w and d*_r/w (see z80scc.h)\n");
-		return;
-	}
-
-	LOG("z80scc_device::ba_cd_inv_w ba:%02x cd:%02x\n", ba, cd);
-
-	if (cd)
+	if (dc)
 		channel->data_write(data);
 	else
 		channel->control_write(data);
@@ -1936,8 +1841,8 @@ void z80scc_channel::do_sccreg_wr0(uint8_t data)
 			// loop over all interrupt sources
 			for (auto & elem : m_uart->m_int_state)
 			{
-				// find the first channel with an interrupt requested
-				if (elem & Z80_DAISY_INT)
+				// find the first interrupt under service
+				if (elem & Z80_DAISY_IEO)
 				{
 					LOGCMD("- %c found IUS bit to clear\n", 'A' + m_index);
 					elem = 0; // Clear IUS bit (called IEO in z80 daisy lingo)
@@ -1954,7 +1859,8 @@ void z80scc_channel::do_sccreg_wr0(uint8_t data)
 		  of these modes is selected and this command is issued before the data has been read from the
 		  Receive FIFO, the data is lost */
 		LOGCMD("%s: %c : WR0_ERROR_RESET - not implemented\n", owner()->tag(), 'A' + m_index);
-		m_rx_fifo_rp_step(); // Reset error state in fifo and unlock it. unlock == step to next slot in fifo.
+		if (m_rx_fifo_wp != m_rx_fifo_rp)
+			m_rx_fifo_rp_step(); // Reset error state in fifo and unlock it. unlock == step to next slot in fifo.
 		break;
 	case WR0_SEND_ABORT: // Flush transmitter and Send 8-13 bits of '1's, used with SDLC
 		LOGCMD("%s: %c : WR0_SEND_ABORT - not implemented\n", owner()->tag(), 'A' + m_index);
@@ -2095,7 +2001,7 @@ void z80scc_channel::do_sccreg_wr4(uint8_t data)
 	LOG("%s(%02x) Setting up asynchronous frame format and clock\n", FUNCNAME, data);
 	if (data == m_wr4)
 	{
-		logerror("- suppressing reinit of Tx as write to wr4 is identical to previous value\n");
+		LOG("- suppressing reinit of Tx as write to wr4 is identical to previous value\n");
 	}
 	else
 	{
@@ -2119,7 +2025,7 @@ void z80scc_channel::do_sccreg_wr5(uint8_t data)
 	LOG("%s(%02x) Setting up the transmitter\n", FUNCNAME, data);
 	if (data == m_wr5)
 	{
-		logerror("- suppressing reinit of Tx as write to wr5 is identical to previous value\n");
+		LOG("- suppressing reinit of Tx as write to wr5 is identical to previous value\n");
 	}
 	else
 	{
@@ -2760,7 +2666,7 @@ void z80scc_channel::receive_data(uint8_t data)
 //-------------------------------------------------
 //  cts_w - clear to send handler
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80scc_channel::cts_w )
+void z80scc_channel::cts_w(int state)
 {
 	LOG("\"%s\"%s: %c : CTS %u\n", owner()->tag(), FUNCNAME, 'A' + m_index, state);
 
@@ -2797,7 +2703,7 @@ WRITE_LINE_MEMBER( z80scc_channel::cts_w )
 //-------------------------------------------------
 //  dcd_w - data carrier detected handler
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80scc_channel::dcd_w )
+void z80scc_channel::dcd_w(int state)
 {
 	LOGDCD("\"%s\": %c : DCD %u\n", owner()->tag(), 'A' + m_index, state);
 
@@ -2836,7 +2742,7 @@ WRITE_LINE_MEMBER( z80scc_channel::dcd_w )
 //-------------------------------------------------
 //  sync_w - sync handler for external sync mode
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80scc_channel::sync_w )
+void z80scc_channel::sync_w(int state)
 {
 	LOGSYNC("\"%s\": %c : SYNC %u\n", owner()->tag(), 'A' + m_index, state);
 
@@ -2874,7 +2780,7 @@ WRITE_LINE_MEMBER( z80scc_channel::sync_w )
 //-------------------------------------------------
 //  rxc_w - receive clock
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80scc_channel::rxc_w )
+void z80scc_channel::rxc_w(int state)
 {
 /* Support for external clock as source for BRG yet to be finished */
 #if 0
@@ -2926,7 +2832,7 @@ WRITE_LINE_MEMBER( z80scc_channel::rxc_w )
 //-------------------------------------------------
 //  txc_w - transmit clock
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80scc_channel::txc_w )
+void z80scc_channel::txc_w(int state)
 {
 	//LOG("\"%s\": %c : Transmitter Clock Pulse\n", owner()->tag(), m_index + 'A');
 	if (m_wr5 & WR5_TX_ENABLE)
@@ -3077,7 +2983,7 @@ void z80scc_channel::set_dtr(int state)
 //  write_rx - called by terminal through rs232/diserial
 //         when character is sent to board
 //-------------------------------------------------
-WRITE_LINE_MEMBER(z80scc_channel::write_rx)
+void z80scc_channel::write_rx(int state)
 {
 #if START_BIT_HUNT
 	// Check for start bit if not receiving

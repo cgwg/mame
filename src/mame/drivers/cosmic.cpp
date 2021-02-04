@@ -40,13 +40,12 @@ cosmicg - board can operate in b&w mode if there is no PROM, in this case
 #include "cpu/tms9900/tms9980a.h"
 #include "cpu/z80/z80.h"
 #include "sound/samples.h"
-#include "sound/volt_reg.h"
 #include "speaker.h"
 
 
 /* Schematics show 12 triggers for discrete sound circuits */
 
-WRITE8_MEMBER(cosmic_state::panic_sound_output_w)
+void cosmic_state::panic_sound_output_w(offs_t offset, uint8_t data)
 {
 	/* Sound Enable / Disable */
 	if (offset == 11)
@@ -112,7 +111,7 @@ WRITE8_MEMBER(cosmic_state::panic_sound_output_w)
 	#endif
 }
 
-WRITE8_MEMBER(cosmic_state::panic_sound_output2_w)
+void cosmic_state::panic_sound_output2_w(offs_t offset, uint8_t data)
 {
 	if (m_sound_enabled)
 	{
@@ -128,7 +127,7 @@ WRITE8_MEMBER(cosmic_state::panic_sound_output2_w)
 #endif
 }
 
-WRITE8_MEMBER(cosmic_state::cosmicg_output_w)
+void cosmic_state::cosmicg_output_w(offs_t offset, uint8_t data)
 {
 	/* Sound Enable / Disable */
 	if (offset == 12)
@@ -148,7 +147,7 @@ WRITE8_MEMBER(cosmic_state::cosmicg_output_w)
 		/* The schematics show a direct link to the sound amp  */
 		/* as other cosmic series games, but it is toggled     */
 		/* once during game over. It is implemented for sake   */
-		/* of completness.                                     */
+		/* of completeness.                                    */
 		case 1: m_dac->write(BIT(data, 0)); break; /* Game Over */
 		case 2: if (data) m_samples->start(0, m_march_select); break;   /* March Sound */
 		case 3: m_march_select = (m_march_select & 0xfe) | data; break;
@@ -190,7 +189,7 @@ WRITE8_MEMBER(cosmic_state::cosmicg_output_w)
 }
 
 
-WRITE8_MEMBER(cosmic_state::cosmica_sound_output_w)
+void cosmic_state::cosmica_sound_output_w(offs_t offset, uint8_t data)
 {
 	/* Sound Enable / Disable */
 	if (offset == 11)
@@ -222,65 +221,42 @@ WRITE8_MEMBER(cosmic_state::cosmica_sound_output_w)
 				{
 				case 2:
 					if (m_samples->playing(2))
-					{
 						m_samples->stop(2);
-						m_samples->start(2, 3);
-					}
-					else
-						m_samples->start(2, 3);
+					m_samples->start(2, 3);
 					break;
 
 				case 3:
 					if (m_samples->playing(3))
-					{
 						m_samples->stop(3);
-						m_samples->start(3, 4);
-					}
-					else
-						m_samples->start(3, 4);
+					m_samples->start(3, 4);
 					break;
 
 				case 4:
 					if (m_samples->playing(4))
-					{
 						m_samples->stop(4);
-						m_samples->start(4, 5);
-					}
-					else
-						m_samples->start(4, 5);
+					m_samples->start(4, 5);
 					break;
 
 				case 5:
 					if (m_samples->playing(5))
-					{
 						m_samples->stop(5);
-						m_samples->start(5, 6);
-					}
-					else
-						m_samples->start(5, 6);
+					m_samples->start(5, 6);
 					break;
 
 				case 6:
 					if (m_samples->playing(6))
-					{
 						m_samples->stop(6);
-						m_samples->start(6, 7);
-					}
-					else
-						m_samples->start(6, 7);
+					m_samples->start(6, 7);
 					break;
 
 				case 7:
 					if (m_samples->playing(7))
-					{
 						m_samples->stop(7);
-						m_samples->start(7, 8);
-					}
-					else
-						m_samples->start(7, 8);
+					m_samples->start(7, 8);
 					break;
 				}
 			}
+			break;
 
 		case 3: /*Dive Bombing Type B (G.S.B)*/
 			if (data)
@@ -327,17 +303,17 @@ WRITE8_MEMBER(cosmic_state::cosmica_sound_output_w)
 	#endif
 }
 
-WRITE8_MEMBER(cosmic_state::dac_w)
+void cosmic_state::dac_w(uint8_t data)
 {
 	m_dac->write(BIT(data, 7));
 }
 
-READ8_MEMBER(cosmic_state::cosmica_pixel_clock_r)
+uint8_t cosmic_state::cosmica_pixel_clock_r()
 {
 	return (m_screen->vpos() >> 2) & 0x3f;
 }
 
-READ8_MEMBER(cosmic_state::cosmicg_port_0_r)
+uint8_t cosmic_state::cosmicg_port_0_r(offs_t offset)
 {
 	/* The top four address lines from the CRTC are bits 0-3 */
 	if (offset >= 4)
@@ -346,12 +322,12 @@ READ8_MEMBER(cosmic_state::cosmicg_port_0_r)
 		return BIT(m_screen->vpos(), offset + 4);
 }
 
-READ8_MEMBER(cosmic_state::cosmicg_port_1_r)
+uint8_t cosmic_state::cosmicg_port_1_r(offs_t offset)
 {
 	return BIT(m_in_ports[1]->read(), offset);
 }
 
-READ8_MEMBER(cosmic_state::magspot_coinage_dip_r)
+uint8_t cosmic_state::magspot_coinage_dip_r(offs_t offset)
 {
 	return (m_dsw.read_safe(0) & (1 << (7 - offset))) ? 0 : 1;
 }
@@ -359,7 +335,7 @@ READ8_MEMBER(cosmic_state::magspot_coinage_dip_r)
 
 /* Has 8 way joystick, remap combinations to missing directions */
 
-READ8_MEMBER(cosmic_state::nomnlnd_port_0_1_r)
+uint8_t cosmic_state::nomnlnd_port_0_1_r(offs_t offset)
 {
 	int control = m_in_ports[offset]->read();
 	int fire = m_in_ports[3]->read();
@@ -378,7 +354,7 @@ READ8_MEMBER(cosmic_state::nomnlnd_port_0_1_r)
 
 
 
-WRITE8_MEMBER(cosmic_state::flip_screen_w)
+void cosmic_state::flip_screen_w(uint8_t data)
 {
 	flip_screen_set(data & 0x80);
 }
@@ -1064,8 +1040,6 @@ void cosmic_state::panic(machine_config &config)
 	m_samples->add_route(ALL_OUTPUTS, "speaker", 0.25);
 
 	DAC_1BIT(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.5);
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 }
 
 void cosmic_state::cosmica(machine_config &config)
@@ -1119,8 +1093,6 @@ void cosmic_state::cosmicg(machine_config &config)
 	m_samples->add_route(ALL_OUTPUTS, "speaker", 0.25);
 
 	DAC_1BIT(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.5); // NE556
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 	// Other DACs include 3-bit binary-weighted (100K/50K/25K) DAC combined with another NE556 for attack march
 }
 
@@ -1142,8 +1114,6 @@ void cosmic_state::magspot(machine_config &config)
 	SPEAKER(config, "speaker").front_center();
 
 	DAC_1BIT(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.5);
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 }
 
 void cosmic_state::devzone(machine_config &config)
@@ -1171,8 +1141,6 @@ void cosmic_state::nomnlnd(machine_config &config)
 	SPEAKER(config, "speaker").front_center();
 
 	DAC_1BIT(config, m_dac, 0).add_route(ALL_OUTPUTS, "speaker", 0.5);
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
-	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
 }
 
 
@@ -1367,6 +1335,28 @@ ROM_START( cosmica1 ) /* earlier 7910-A pcb, had lots of rework; roms do NOT hav
 
 	ROM_REGION( 0x0400, "user2", 0 ) /* starfield generator */
 	ROM_LOAD( "8.k3",       0x0000, 0x0400, CRC(acbd4e98) SHA1(d33fe8bdc77bb18a3ffb369ea692210d1b890771) ) /* 2708; located on sub pcb */
+ROM_END
+
+ROM_START( cosmica3 ) // main: 7910-AII sub: 7910-BII sound: 7910-S
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "1.e3",      0x0000, 0x0800, CRC(535ee0c5) SHA1(3ec3056b7fabe07ef49a9179114aa74be44a943e) )
+	ROM_LOAD( "2-ii-2.e4", 0x0800, 0x0800, CRC(6c9907e8) SHA1(699369b2116c24a41de48c737aa9adc67cbb25cd) ) // has an & stamped on the chip
+	ROM_LOAD( "3-ii-3.e5", 0x1000, 0x0800, CRC(c7205278) SHA1(439da2d8f591378c323b7ace273fd2da90b80076) ) // has an & stamped on the chip
+	ROM_LOAD( "4-ii-4.e6", 0x1800, 0x0800, CRC(c7765ecd) SHA1(fa793510560bc50d5ddbdec44651b76f5a22003f) ) // has an & stamped on the chip
+	ROM_LOAD( "5-ii-5.e7", 0x2000, 0x0800, CRC(5f60242f) SHA1(d5dad3b2b8508dc272567bd091bcbb53fe9b2cc6) ) // has an & stamped on the chip
+
+	ROM_REGION( 0x1000, "gfx1", 0 ) // sprites
+	ROM_LOAD( "7.n2", 0x0000, 0x0800, CRC(aa6c6079) SHA1(af4ab73e9e1c189290b26bf42adb511d5a347df9) )
+	ROM_LOAD( "6.n1", 0x0800, 0x0800, CRC(431e866c) SHA1(b007cd3cc856360a0247bd78bb49d173f5cef321) )
+
+	ROM_REGION( 0x0020, "proms", 0 )
+	ROM_LOAD( "u7910.d9", 0x0000, 0x0020, BAD_DUMP CRC(dfb60f19) SHA1(d510327ff3492f098659c551f7245835f61a2959) ) // not dumped for this set, probably matches the other
+
+	ROM_REGION( 0x0400, "user1", 0 ) // color map
+	ROM_LOAD( "9-9.e2", 0x0000, 0x0400, CRC(ea4ee931) SHA1(d0a4afda4b493efb40286c2d67bf56a2a8b8da9d) )
+
+	ROM_REGION( 0x0400, "user2", 0 ) // starfield generator
+	ROM_LOAD( "8-8.ic10", 0x0000, 0x0400, CRC(acbd4e98) SHA1(d33fe8bdc77bb18a3ffb369ea692210d1b890771) )
 ROM_END
 
 ROM_START( cosmicg )
@@ -1575,16 +1565,16 @@ void cosmic_state::init_cosmica()
 
 void cosmic_state::init_devzone()
 {
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x4807, 0x4807,write8_delegate(FUNC(cosmic_state::cosmic_background_enable_w),this));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x4807, 0x4807, write8smo_delegate(*this, FUNC(cosmic_state::cosmic_background_enable_w)));
 }
 
 
 void cosmic_state::init_nomnlnd()
 {
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0x5000, 0x5001, read8_delegate(FUNC(cosmic_state::nomnlnd_port_0_1_r),this));
+	m_maincpu->space(AS_PROGRAM).install_read_handler(0x5000, 0x5001, read8sm_delegate(*this, FUNC(cosmic_state::nomnlnd_port_0_1_r)));
 	m_maincpu->space(AS_PROGRAM).nop_write(0x4800, 0x4800);
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x4807, 0x4807, write8_delegate(FUNC(cosmic_state::cosmic_background_enable_w),this));
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0x480a, 0x480a, write8_delegate(FUNC(cosmic_state::dac_w), this));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x4807, 0x4807, write8smo_delegate(*this, FUNC(cosmic_state::cosmic_background_enable_w)));
+	m_maincpu->space(AS_PROGRAM).install_write_handler(0x480a, 0x480a, write8smo_delegate(*this, FUNC(cosmic_state::dac_w)));
 }
 
 void cosmic_state::init_panic()
@@ -1595,7 +1585,8 @@ void cosmic_state::init_panic()
 
 GAME( 1979, cosmicg,  0,       cosmicg, cosmicg,  cosmic_state, init_cosmicg, ROT270, "Universal", "Cosmic Guerilla", MACHINE_IMPERFECT_SOUND | MACHINE_NO_COCKTAIL /*| MACHINE_SUPPORTS_SAVE */)
 GAME( 1979, cosmicgi, cosmicg, cosmicg, cosmicg,  cosmic_state, init_cosmicg, ROT270, "bootleg (Inder)", "Cosmic Guerilla (Spanish bootleg)", MACHINE_IMPERFECT_SOUND | MACHINE_NO_COCKTAIL  /*| MACHINE_SUPPORTS_SAVE */)
-GAME( 1979, cosmica,  0,       cosmica, cosmica,  cosmic_state, init_cosmica, ROT270, "Universal", "Cosmic Alien (version II)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME( 1979, cosmica,  0,       cosmica, cosmica,  cosmic_state, init_cosmica, ROT270, "Universal", "Cosmic Alien (version II, set 1)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME( 1979, cosmica3, cosmica, cosmica, cosmica,  cosmic_state, init_cosmica, ROT270, "Universal", "Cosmic Alien (version II, set 2)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 GAME( 1979, cosmica1, cosmica, cosmica, cosmica,  cosmic_state, init_cosmica, ROT270, "Universal", "Cosmic Alien (first version)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 GAME( 1979, cosmica2, cosmica, cosmica, cosmica,  cosmic_state, init_cosmica, ROT270, "Universal", "Cosmic Alien (early version II?)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
 GAME( 1980, nomnlnd,  0,       nomnlnd, nomnlnd,  cosmic_state, init_nomnlnd, ROT270, "Universal", "No Man's Land", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )

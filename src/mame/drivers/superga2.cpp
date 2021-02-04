@@ -13,7 +13,6 @@
 
     To do
     - verify palette, pixel and cpu clocks
-    - two player mode
 
 ************************************************************************/
 
@@ -65,17 +64,12 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-	DECLARE_READ8_MEMBER(ram_r);
-	DECLARE_WRITE8_MEMBER(ram_w);
-	DECLARE_READ8_MEMBER(speaker_toggle_r);
-	DECLARE_WRITE8_MEMBER(speaker_toggle_w);
-	DECLARE_READ8_MEMBER(switches_r);
-	DECLARE_WRITE_LINE_MEMBER(txt_w);
-	DECLARE_WRITE_LINE_MEMBER(mix_w);
-	DECLARE_WRITE_LINE_MEMBER(scr_w);
-	DECLARE_WRITE_LINE_MEMBER(res_w);
-	DECLARE_WRITE_LINE_MEMBER(an2_w);
-	DECLARE_READ8_MEMBER(reset_r);
+	uint8_t ram_r(offs_t offset);
+	void ram_w(offs_t offset, uint8_t data);
+	uint8_t speaker_toggle_r();
+	void speaker_toggle_w(uint8_t data);
+	uint8_t switches_r(offs_t offset);
+	uint8_t reset_r(offs_t offset);
 
 	void kuzmich(machine_config &config);
 	void kuzmich_map(address_map &map);
@@ -116,9 +110,6 @@ void superga2_state::machine_reset()
 	uint8_t *user1 = memregion("maincpu")->base();
 
 	memcpy(&m_ram_ptr[0x1100], user1, 0x8000);
-	mix_w(false);
-	scr_w(false);
-	res_w(true);
 }
 
 /***************************************************************************
@@ -136,63 +127,27 @@ uint32_t superga2_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
     I/O
 ***************************************************************************/
 
-WRITE_LINE_MEMBER(superga2_state::txt_w)
-{
-	if (m_video->m_graphics == state) // avoid flickering from II+ refresh polling
-	{
-		// select graphics or text mode
-		m_screen->update_now();
-		m_video->m_graphics = !state;
-	}
-}
-
-WRITE_LINE_MEMBER(superga2_state::mix_w)
-{
-	// select mixed mode or nomix
-	m_screen->update_now();
-	m_video->m_mix = state;
-}
-
-WRITE_LINE_MEMBER(superga2_state::scr_w)
-{
-	// select primary or secondary page
-	m_screen->update_now();
-	m_video->m_page2 = state;
-}
-
-WRITE_LINE_MEMBER(superga2_state::res_w)
-{
-	// select lo-res or hi-res
-	m_screen->update_now();
-	m_video->m_hires = state;
-}
-
-WRITE_LINE_MEMBER(superga2_state::an2_w)
-{
-	m_video->m_an2 = state;
-}
-
-READ8_MEMBER(superga2_state::speaker_toggle_r)
+uint8_t superga2_state::speaker_toggle_r()
 {
 	if (!machine().side_effects_disabled())
-		speaker_toggle_w(space, offset, 0);
+		speaker_toggle_w(0);
 	return read_floatingbus();
 }
 
-WRITE8_MEMBER(superga2_state::speaker_toggle_w)
+void superga2_state::speaker_toggle_w(uint8_t data)
 {
 	m_speaker_state ^= 1;
 	m_speaker->level_w(m_speaker_state);
 }
 
-READ8_MEMBER(superga2_state::switches_r)
+uint8_t superga2_state::switches_r(offs_t offset)
 {
 	if (!machine().side_effects_disabled())
 		m_softlatch->write_bit((offset & 0x0e) >> 1, offset & 0x01);
 	return read_floatingbus();
 }
 
-READ8_MEMBER(superga2_state::reset_r)
+uint8_t superga2_state::reset_r(offs_t offset)
 {
 	switch (offset)
 	{
@@ -211,7 +166,7 @@ uint8_t superga2_state::read_floatingbus()
     ADDRESS MAP
 ***************************************************************************/
 
-READ8_MEMBER(superga2_state::ram_r)
+uint8_t superga2_state::ram_r(offs_t offset)
 {
 	if (offset < m_ram_size)
 	{
@@ -221,7 +176,7 @@ READ8_MEMBER(superga2_state::ram_r)
 	return 0xff;
 }
 
-WRITE8_MEMBER(superga2_state::ram_w)
+void superga2_state::ram_w(offs_t offset, uint8_t data)
 {
 	if (offset < m_ram_size)
 	{
@@ -244,16 +199,14 @@ void superga2_state::kuzmich_map(address_map &map)
 
 static INPUT_PORTS_START( kuzmich )
 	PORT_START("P1")
-	// verified
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(1)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(1)
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_START1 )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(2)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(1)
-	// unverified
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(2)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(2)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
 INPUT_PORTS_END
 
 void superga2_state::kuzmich(machine_config &config)
@@ -262,7 +215,7 @@ void superga2_state::kuzmich(machine_config &config)
 	M6502(config, m_maincpu, 1021800);
 	m_maincpu->set_addrmap(AS_PROGRAM, &superga2_state::kuzmich_map);
 
-	APPLE2_VIDEO(config, m_video, XTAL(14'318'181));
+	APPLE2_VIDEO(config, m_video, XTAL(14'318'181)).set_screen(m_screen);
 	APPLE2_COMMON(config, m_a2common, XTAL(14'318'181));
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
@@ -276,11 +229,10 @@ void superga2_state::kuzmich(machine_config &config)
 
 	/* soft switches */
 	F9334(config, m_softlatch); // F14 (labeled 74LS259 on some boards and in the Apple ][ Reference Manual)
-	m_softlatch->q_out_cb<0>().set(FUNC(superga2_state::txt_w));
-	m_softlatch->q_out_cb<1>().set(FUNC(superga2_state::mix_w));
-	m_softlatch->q_out_cb<2>().set(FUNC(superga2_state::scr_w));
-	m_softlatch->q_out_cb<3>().set(FUNC(superga2_state::res_w));
-	m_softlatch->q_out_cb<6>().set(FUNC(superga2_state::an2_w));
+	m_softlatch->q_out_cb<0>().set(m_video, FUNC(a2_video_device::txt_w));
+	m_softlatch->q_out_cb<1>().set(m_video, FUNC(a2_video_device::mix_w));
+	m_softlatch->q_out_cb<2>().set(m_video, FUNC(a2_video_device::scr_w));
+	m_softlatch->q_out_cb<3>().set(m_video, FUNC(a2_video_device::res_w));
 
 	RAM(config, RAM_TAG).set_default_size("48K").set_default_value(0x00);
 }

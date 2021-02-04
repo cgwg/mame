@@ -64,10 +64,10 @@ private:
 
 	void update_interrupts();
 
-	DECLARE_READ8_MEMBER(read);
-	DECLARE_WRITE8_MEMBER(write);
-	DECLARE_READ8_MEMBER(io_r);
-	DECLARE_WRITE8_MEMBER(io_w);
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
+	uint8_t io_r(offs_t offset);
+	void io_w(offs_t offset, uint8_t data);
 
 	DECLARE_READ_LINE_MEMBER(clear_r);
 	DECLARE_READ_LINE_MEMBER(ef1_r);
@@ -86,7 +86,7 @@ private:
 	DECLARE_WRITE_LINE_MEMBER(exp_dma_out_w);
 	DECLARE_WRITE_LINE_MEMBER(exp_dma_in_w);
 
-	DECLARE_QUICKLOAD_LOAD_MEMBER( vip );
+	DECLARE_QUICKLOAD_LOAD_MEMBER(quickload_cb);
 
 	void vip_io(address_map &map);
 	void vip_mem(address_map &map);

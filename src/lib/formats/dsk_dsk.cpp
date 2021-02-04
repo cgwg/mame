@@ -8,8 +8,8 @@
 
 *********************************************************************/
 
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 
 #include "imageutl.h"
 #include "flopimg.h"
@@ -299,7 +299,7 @@ bool dsk_format::supports_save() const
 	return false;
 }
 
-int dsk_format::identify(io_generic *io, uint32_t form_factor)
+int dsk_format::identify(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants)
 {
 	uint8_t header[16];
 
@@ -344,7 +344,7 @@ struct sector_header
 
 #pragma pack()
 
-bool dsk_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool dsk_format::load(io_generic *io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image *image)
 {
 	uint8_t header[0x100];
 	bool extendformat = false;
@@ -381,7 +381,7 @@ bool dsk_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 		}
 	}
 	if (heads > img_heads)
-		return false;
+		osd_printf_warning("dsk: Floppy disk has excess of heads for this drive that will be discarded (floppy heads=%d, drive heads=%d).\n", heads, img_heads);
 
 	uint64_t track_offsets[84*2];
 	int cnt =0;
@@ -414,7 +414,7 @@ bool dsk_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 
 	int counter = 0;
 	for(int track=0; track < tracks; track++) {
-		for(int side=0; side < heads; side++) {
+		for(int side=0; side < std::min(heads, img_heads); side++) {
 			if(track_offsets[(track<<1)+side] >= image_size)
 				continue;
 			track_header tr;
@@ -424,10 +424,27 @@ bool dsk_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 			if (tr.number_of_sector == 0)
 				continue;
 
+			int protection = 0;
+			int first_sector_code = -1;
+			for(int j=0;j<tr.number_of_sector;j++) {
+				sector_header sector;
+				io_generic_read(io, &sector,track_offsets[(track<<1)+side]+sizeof(tr)+(sizeof(sector)*j),sizeof(sector));
+
+				if (j == 0)
+					first_sector_code = sector.sector_size_code;
+
+				if ((j > 0) && (sector.sector_size_code == 2) && (first_sector_code == 6))
+					protection = 1;  //  first: 6144 rest: 512
+
+				if ((j > 0) && (sector.sector_size_code == j) && (first_sector_code == 0))
+					protection = 2;  // first: 128 rest: N*128
+			}
+
 			desc_pc_sector sects[256];
 			uint8_t sect_data[65536];
 			int sdatapos = 0;
 			int pos = track_offsets[(track<<1)+side] + 0x100;
+
 			for(int j=0;j<tr.number_of_sector;j++) {
 				sector_header sector;
 				io_generic_read(io, &sector,track_offsets[(track<<1)+side]+sizeof(tr)+(sizeof(sector)*j),sizeof(sector));
@@ -437,7 +454,14 @@ bool dsk_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 				sects[j].sector      = sector.sector_id;
 				sects[j].size        = sector.sector_size_code;
 				if(extendformat)
-					sects[j].actual_size = sector.data_length;
+				{
+					if (protection == 1)
+						sects[j].actual_size = 512;
+					else if (protection == 2)
+						sects[j].actual_size = 128;
+					else
+						sects[j].actual_size = sector.data_length;
+				}
 				else
 					sects[j].actual_size = 128 << tr.sector_size_code;
 

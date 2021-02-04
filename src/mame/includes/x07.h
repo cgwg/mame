@@ -15,7 +15,6 @@
 #include "machine/nvram.h"
 #include "machine/ram.h"
 #include "machine/timer.h"
-#include "sound/wave.h"
 #include "imagedev/cassette.h"
 #include "imagedev/printer.h"
 #include "formats/x07_cas.h"
@@ -199,8 +198,8 @@ private:
 	void machine_start() override;
 	void machine_reset() override;
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	DECLARE_READ8_MEMBER( x07_io_r );
-	DECLARE_WRITE8_MEMBER( x07_io_w );
+	uint8_t x07_io_r(offs_t offset);
+	void x07_io_w(offs_t offset, uint8_t data);
 
 	void nvram_init(nvram_device &nvram, void *data, size_t size);
 
@@ -221,7 +220,7 @@ private:
 	inline void draw_point(uint8_t x, uint8_t y, uint8_t color);
 	inline void draw_udk();
 
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( x07_card );
+	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( card_load );
 
 	/* general */
 	uint8_t m_sleep;

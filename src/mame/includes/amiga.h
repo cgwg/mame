@@ -352,7 +352,9 @@ public:
 		m_rx_state(0),
 		m_tx_state(0),
 		m_rx_previous(1)
-	{ }
+	{
+		std::fill(std::begin(m_custom_regs), std::end(m_custom_regs), 0);
+	}
 
 	/* chip RAM access */
 	uint16_t read_chip_ram(offs_t byteoffs)
@@ -366,12 +368,12 @@ public:
 			m_chip_ram.write(byteoffs >> 1, data);
 	}
 
-	DECLARE_READ16_MEMBER(chip_ram_r)
+	uint16_t chip_ram_r(offs_t offset, uint16_t mem_mask = ~0)
 	{
 		return read_chip_ram(offset & ~1) & mem_mask;
 	}
 
-	DECLARE_WRITE16_MEMBER(chip_ram_w)
+	void chip_ram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0)
 	{
 		uint16_t val = read_chip_ram(offset & ~1) & ~mem_mask;
 		write_chip_ram(offset & ~1, val | data);
@@ -418,7 +420,7 @@ public:
 	DECLARE_VIDEO_START( amiga_aga );
 	void amiga_palette(palette_device &palette) const;
 
-	uint32_t screen_update_amiga(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update_amiga(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_amiga_aga(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void update_screenmode();
 
@@ -427,19 +429,19 @@ public:
 	TIMER_CALLBACK_MEMBER( amiga_blitter_proc );
 	void update_irqs();
 
-	DECLARE_CUSTOM_INPUT_MEMBER( amiga_joystick_convert );
+	template <int P> DECLARE_CUSTOM_INPUT_MEMBER( amiga_joystick_convert );
 	DECLARE_CUSTOM_INPUT_MEMBER( floppy_drive_status );
 
 	DECLARE_WRITE_LINE_MEMBER( m68k_reset );
 	DECLARE_WRITE_LINE_MEMBER( kbreset_w );
 
-	DECLARE_READ16_MEMBER( cia_r );
-	DECLARE_WRITE16_MEMBER( cia_w );
-	DECLARE_WRITE16_MEMBER( gayle_cia_w );
-	DECLARE_WRITE8_MEMBER( cia_0_port_a_write );
+	uint16_t cia_r(offs_t offset, uint16_t mem_mask = ~0);
+	void cia_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	void gayle_cia_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	void cia_0_port_a_write(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER( cia_0_irq );
-	DECLARE_READ8_MEMBER( cia_1_port_a_read );
-	DECLARE_WRITE8_MEMBER( cia_1_port_a_write );
+	uint8_t cia_1_port_a_read();
+	void cia_1_port_a_write(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER( cia_1_irq );
 
 	DECLARE_WRITE_LINE_MEMBER( rs232_rx_w );
@@ -453,13 +455,13 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( centronics_perror_w );
 	DECLARE_WRITE_LINE_MEMBER( centronics_select_w );
 
-	DECLARE_READ16_MEMBER( custom_chip_r );
-	DECLARE_WRITE16_MEMBER( custom_chip_w );
+	uint16_t custom_chip_r(offs_t offset);
+	void custom_chip_w(offs_t offset, uint16_t data);
 
 	DECLARE_WRITE_LINE_MEMBER( paula_int_w );
 
-	DECLARE_READ16_MEMBER( rom_mirror_r );
-	DECLARE_READ32_MEMBER( rom_mirror32_r );
+	uint16_t rom_mirror_r(offs_t offset, uint16_t mem_mask = ~0);
+	uint32_t rom_mirror32_r(offs_t offset, uint32_t mem_mask = ~0);
 
 	DECLARE_WRITE_LINE_MEMBER(fdc_dskblk_w);
 	DECLARE_WRITE_LINE_MEMBER(fdc_dsksyn_w);
@@ -490,11 +492,6 @@ public:
 
 	uint16_t m_agnus_id;
 	uint16_t m_denise_id;
-
-	void write_custom_chip(uint16_t offset, uint16_t data, uint16_t mem_mask = 0xffff)
-	{
-		custom_chip_w(m_maincpu->space(AS_PROGRAM), offset, data, mem_mask);
-	}
 
 	void blitter_setup();
 
@@ -630,7 +627,7 @@ private:
 	void fetch_bitplane_data(int plane);
 	int update_ham(int newpix);
 	void update_display_window();
-	void render_scanline(bitmap_ind16 &bitmap, int scanline);
+	void render_scanline(bitmap_rgb32 &bitmap, int scanline);
 
 	// AGA video helpers
 	void aga_palette_write(int color_reg, uint16_t data);
@@ -699,8 +696,7 @@ private:
 	bool m_diwhigh_valid;
 
 	bool m_previous_lof;
-	bitmap_ind16 m_flickerfixer;
-	bitmap_ind32 m_flickerfixer32;
+	bitmap_rgb32 m_flickerfixer;
 
 	uint16_t m_rx_shift;
 	uint16_t m_tx_shift;

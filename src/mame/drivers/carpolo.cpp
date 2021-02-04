@@ -24,7 +24,7 @@
 #include "machine/74153.h"
 #include "machine/6821pia.h"
 #include "screen.h"
-
+#include "speaker.h"
 
 
 /*************************************
@@ -245,8 +245,8 @@ void carpolo_state::carpolo(machine_config &config)
 	pia0.cb2_handler().set(FUNC(carpolo_state::coin2_interrupt_clear_w));
 
 	pia6821_device &pia1(PIA6821(config, "pia1", 0));
-	pia0.readpa_handler().set(FUNC(carpolo_state::pia_1_port_a_r));
-	pia0.readpb_handler().set(FUNC(carpolo_state::pia_1_port_b_r));
+	pia1.readpa_handler().set(FUNC(carpolo_state::pia_1_port_a_r));
+	pia1.readpb_handler().set(FUNC(carpolo_state::pia_1_port_b_r));
 	pia1.ca2_handler().set(FUNC(carpolo_state::coin3_interrupt_clear_w));
 	pia1.cb2_handler().set(FUNC(carpolo_state::coin4_interrupt_clear_w));
 
@@ -290,6 +290,21 @@ void carpolo_state::carpolo(machine_config &config)
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_carpolo);
 	PALETTE(config, m_palette, FUNC(carpolo_state::carpolo_palette), 12*2+2*16+4*2);
+
+	/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+
+	NETLIST_SOUND(config, "sound_nl", 48000)
+		.set_source(NETLIST_NAME(carpolo))
+		.add_route(ALL_OUTPUTS, "mono", 1.0);
+
+	NETLIST_LOGIC_INPUT(config, "sound_nl:player_crash1", "PL1_CRASH.IN", 0);
+	NETLIST_LOGIC_INPUT(config, "sound_nl:player_crash2", "PL2_CRASH.IN", 0);
+	NETLIST_LOGIC_INPUT(config, "sound_nl:player_crash3", "PL3_CRASH.IN", 0);
+	NETLIST_LOGIC_INPUT(config, "sound_nl:player_crash4", "PL4_CRASH.IN", 0);
+
+	// Temporarily just tied to an arbitrary value to preserve lack of audio.
+	NETLIST_STREAM_OUTPUT(config, "sound_nl:cout0", 0, "PL1_CRASH.GND").set_mult_offset(10000.0 / 32768.0, 0.0);
 }
 
 
